@@ -61,3 +61,28 @@ if (typeof globalThis.ResizeObserver !== 'function') {
     value: ResizeObserverMock,
   });
 }
+
+if (typeof globalThis.IntersectionObserver !== 'function') {
+  class IntersectionObserverMock {
+    observe() {
+      return undefined;
+    }
+
+    unobserve() {
+      return undefined;
+    }
+
+    disconnect() {
+      return undefined;
+    }
+
+    takeRecords() {
+      return [];
+    }
+  }
+
+  Object.defineProperty(globalThis, 'IntersectionObserver', {
+    writable: true,
+    value: IntersectionObserverMock,
+  });
+}

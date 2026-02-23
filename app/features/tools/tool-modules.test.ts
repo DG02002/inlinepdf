@@ -7,7 +7,12 @@ import {
 
 describe('tool modules', () => {
   it('registers loaders for currently ready tools', () => {
-    expect(Object.keys(toolModuleLoaders).sort()).toEqual(['info', 'merge']);
+    expect(Object.keys(toolModuleLoaders).sort()).toEqual([
+      'crop',
+      'cropnew',
+      'info',
+      'merge',
+    ]);
   });
 
   it('does not load modules for non-ready tools', async () => {

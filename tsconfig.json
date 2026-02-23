@@ -10,8 +10,10 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./app/*"]
+      "@/*": ["./app/*"],
+      "~/*": ["./app/*"]
     }
   }
 }

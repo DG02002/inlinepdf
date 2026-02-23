@@ -1,17 +1,15 @@
-import { cn } from '~/lib/utils';
+import { cn } from "@/lib/utils"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Loading03Icon } from "@hugeicons/core-free-icons"
 
-interface SpinnerProps {
-  className?: string;
+type SpinnerProps = Omit<React.ComponentProps<"svg">, "strokeWidth"> & {
+  strokeWidth?: number
 }
 
-export function Spinner({ className }: SpinnerProps) {
+function Spinner({ className, strokeWidth = 2, ...props }: SpinnerProps) {
   return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        'inline-block h-5 w-5 animate-spin rounded-full border-2 border-border border-t-foreground',
-        className,
-      )}
-    />
-  );
+    <HugeiconsIcon icon={Loading03Icon} strokeWidth={strokeWidth} role="status" aria-label="Loading" className={cn("size-4 animate-spin", className)} {...props} />
+  )
 }
+
+export { Spinner }

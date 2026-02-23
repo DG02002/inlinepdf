@@ -93,3 +93,28 @@
     @apply text-foreground;
   }
 }
+
+.crop-mask-blue {
+  --rc-border-color: rgb(59 130 246 / 0.95);
+  --rc-focus-color: rgb(37 99 235);
+  --rc-drag-handle-bg-colour: rgb(59 130 246 / 0.35);
+}
+
+.crop-mask-blue .ReactCrop__crop-selection {
+  animation: none;
+  background-image: none;
+  outline: 2px solid rgb(59 130 246 / 0.95);
+  outline-offset: -1px;
+}
+
+.crop-mask-blue .ReactCrop__drag-handle {
+  border-color: rgb(59 130 246 / 0.95);
+  background-color: rgb(191 219 254 / 0.9);
+}
+
+.crop-mask-blue .ReactCrop__rule-of-thirds-vt:before,
+.crop-mask-blue .ReactCrop__rule-of-thirds-vt:after,
+.crop-mask-blue .ReactCrop__rule-of-thirds-hz:before,
+.crop-mask-blue .ReactCrop__rule-of-thirds-hz:after {
+  background-color: rgb(96 165 250 / 0.75);
+}
