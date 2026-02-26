@@ -21,7 +21,6 @@ export function loader({ params }: LoaderFunctionArgs): ToolRouteLoaderData {
   const tool = getToolBySlug(slug);
 
   if (!tool) {
-    // eslint-disable-next-line @typescript-eslint/only-throw-error
     throw new Response('Tool not found.', { status: 404 });
   }
 

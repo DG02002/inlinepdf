@@ -80,8 +80,8 @@ function createPdfJsLoadingTask(
 function installCanvasMocks(
   toBlobFactory?: (canvas: CanvasMock) => CanvasMock['toBlob'],
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  const originalCreateElement = document.createElement.bind(document);
+  const originalCreateElement = (tagName: string): HTMLElement =>
+    document.createElementNS('http://www.w3.org/1999/xhtml', tagName);
   const canvases: CanvasMock[] = [];
 
   const createElementSpy = vi

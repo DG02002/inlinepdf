@@ -47,12 +47,12 @@ describe('tool detail routing', () => {
           element: <ToolDetailRoute />,
         },
       ],
-      { initialEntries: ['/split'] },
+      { initialEntries: ['/compress'] },
     );
 
     render(<RouterProvider router={router} />);
 
-    expect(await screen.findByText('Split PDF')).toBeInTheDocument();
+    expect(await screen.findByText('Compress PDF')).toBeInTheDocument();
     expect(
       screen.getByText(
         'This tool is planned and will be released in an upcoming milestone.',

@@ -29,13 +29,15 @@ InlinePDF is a local-first PDF toolkit and iLovePDF alternative.
 ## Folder Architecture
 
 - `app/components/layout/*` shared shell (`SiteHeader`, `SiteFooter`, `SiteShell`)
-- `app/components/ui/*` minimal shadcn component primitives used by pages
-- `app/features/tools/*` tool metadata and local-only policy model
+- `app/components/ui/*` shadcn/base-ui primitives used by pages and features
+- `app/features/tools/manifest.ts` canonical tool metadata + module loader map
+- `app/features/tools/*` tool runtime contracts and local-only policy model
 - `app/features/merge/*` merge feature components and service
 - `app/features/pdf/core/*` PDF service interfaces
 - `app/features/pdf/adapters/*` library adapters (`pdf-lib`, `pdfjs`)
 - `app/routes/*` route modules
-- `app/styles/*` design tokens and base styles
+- `assets/branding/source/*` design-source icon files (not served at runtime)
+- `public/icons/*` runtime-served app icons, favicons, and hero logos
 
 ## Local Development
 
@@ -53,9 +55,18 @@ pnpm run build
 pnpm run test
 ```
 
+## Local Release Readiness
+
+```bash
+pnpm run verify
+```
+
+This runs the full local release gate sequence (lint, typecheck, tests, and build)
+without deploying.
+
 ## Adding New Tools
 
-1. Add a new tool entry in `app/features/tools/registry.ts`.
+1. Add a new tool entry in `app/features/tools/manifest.ts`.
 2. Create a feature folder under `app/features/<tool-name>/`.
 3. Add a route under `app/routes/` and map it in `app/routes.ts` as `/<tool-name>`.
    Canonical tool paths use direct slugs like `/merge`, `/split`, `/compress`.

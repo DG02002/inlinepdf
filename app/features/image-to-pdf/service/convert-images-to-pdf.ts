@@ -255,9 +255,11 @@ export async function convertImagesToPdf(
 
   const savedBytes = await outputDocument.save();
   const normalizedOutputBytes = toNormalizedBytes(new Uint8Array(savedBytes));
+  const outputBuffer = new ArrayBuffer(normalizedOutputBytes.byteLength);
+  new Uint8Array(outputBuffer).set(normalizedOutputBytes);
 
   return {
-    blob: new Blob([normalizedOutputBytes.buffer], { type: 'application/pdf' }),
+    blob: new Blob([outputBuffer], { type: 'application/pdf' }),
     fileName: createImagePdfFileName(files[0]?.name ?? 'images'),
     pagesExported: files.length,
   };

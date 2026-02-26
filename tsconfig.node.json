@@ -2,12 +2,17 @@
   "extends": "./tsconfig.json",
   "include": ["vite.config.ts", "react-router.config.ts", "vitest.config.ts"],
   "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "composite": true,
     "strict": true,
     "types": ["node"],
-    "lib": ["ESNext"],
-    "target": "ESNext",
+    "lib": ["ES2023"],
+    "target": "ES2023",
     "module": "ESNext",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true
   }
 }

@@ -8,18 +8,19 @@ import {
 describe('tool modules', () => {
   it('registers loaders for currently ready tools', () => {
     expect(Object.keys(toolModuleLoaders).sort()).toEqual([
-      'cropnew',
+      'crop',
       'image-to-pdf',
       'info',
       'merge',
       'organize',
       'pdf-to-images',
+      'split',
     ]);
   });
 
-  it('does not load modules for non-ready tools', async () => {
+  it('loads modules for ready tools', async () => {
     const module = await loadToolModule('split');
 
-    expect(module).toBeNull();
+    expect(module).not.toBeNull();
   });
 });

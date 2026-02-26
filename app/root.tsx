@@ -11,7 +11,7 @@ import {
 import type { Route } from './+types/root';
 import './app.css';
 import { Shell } from './components/layout/shell';
-import { themeInitScript } from './lib/theme';
+import { themeInitScript, themedIconPaths } from './lib/theme';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,6 +19,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link
+          id="app-favicon-32"
+          rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href={themedIconPaths.light.favicon32}
+        />
+        <link
+          id="app-shortcut-icon"
+          rel="shortcut icon"
+          type="image/png"
+          href={themedIconPaths.light.favicon32}
+        />
+        <link
+          id="app-favicon-16"
+          rel="icon"
+          type="image/png"
+          sizes="16x16"
+          href={themedIconPaths.light.favicon16}
+        />
+        <link
+          id="app-apple-touch-icon"
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href={themedIconPaths.light.appleTouchIcon}
+        />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <Meta />
         <Links />
@@ -57,11 +83,13 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   return (
     <Shell>
       <section className="mx-auto max-w-2xl space-y-4 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-sm">
-        <p className="text-sm font-medium text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {status ? String(status) : 'Error'}
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight">{message}</h1>
-        <p className="text-muted-foreground">{details}</p>
+        <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-balance">
+          {message}
+        </h1>
+        <p className="leading-7 text-muted-foreground">{details}</p>
         <div className="flex flex-wrap gap-3">
           <Link
             to="/"

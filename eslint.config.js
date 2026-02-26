@@ -96,6 +96,8 @@ export default defineConfig([
     name: 'ts/routes',
     files: ['app/routes/**/*.tsx'],
     rules: {
+      // React Router loaders and actions legitimately throw `Response`.
+      '@typescript-eslint/only-throw-error': 'off',
       'react-refresh/only-export-components': 'off',
     },
   },

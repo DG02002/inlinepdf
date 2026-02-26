@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router';
 
 import { Shell } from '~/components/layout/shell';
-import { buttonVariants } from '~/components/ui/button';
+import { buttonVariants } from '~/components/ui/button-variants';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { toolsRegistry } from '~/features/tools/registry';
 import type { ToolCategory, ToolStatus } from '~/features/tools/types';
@@ -23,7 +23,8 @@ const statusLabels: Record<ToolStatus, string> = {
 const statusClassNames: Record<ToolStatus, string> = {
   ready: 'bg-foreground text-background border-border',
   coming_soon: 'bg-card text-muted-foreground border-border',
-  blocked_non_local: 'bg-destructive text-destructive-foreground border-destructive',
+  blocked_non_local:
+    'bg-destructive text-destructive-foreground border-destructive',
 };
 
 export function meta() {
@@ -50,8 +51,10 @@ export default function ToolsIndexRoute() {
     <Shell>
       <section className="space-y-4">
         <header className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">PDF Tools</h1>
-          <p className="text-muted-foreground">
+          <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-balance sm:text-5xl">
+            PDF Tools
+          </h1>
+          <p className="text-lg text-muted-foreground">
             Local-first tooling. Your files never leave your browser.
           </p>
         </header>
@@ -69,7 +72,9 @@ export default function ToolsIndexRoute() {
                 <Card className="h-full">
                   <CardHeader className="space-y-3">
                     <div className="flex items-start justify-between gap-3">
-                      <CardTitle className="text-lg">{tool.title}</CardTitle>
+                      <CardTitle className="text-xl font-semibold tracking-tight">
+                        {tool.title}
+                      </CardTitle>
                       <span
                         className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusClassNames[tool.status]}`}
                       >
@@ -97,7 +102,10 @@ export default function ToolsIndexRoute() {
                     ) : (
                       <Link
                         to={tool.path}
-                        className={buttonVariants({ variant: 'outline', size: 'lg' })}
+                        className={buttonVariants({
+                          variant: 'outline',
+                          size: 'lg',
+                        })}
                       >
                         View details
                       </Link>

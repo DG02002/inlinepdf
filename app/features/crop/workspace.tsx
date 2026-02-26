@@ -1,5 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
-
 import { type SyntheticEvent, useState } from 'react';
 import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -31,10 +29,7 @@ import type {
   PageCropState,
 } from '~/features/crop/types';
 import { ToolWorkspace } from '~/features/tools/components/tool-workspace';
-import type {
-  ToolModule,
-  ToolModuleRunInput,
-} from '~/features/tools/tool-modules';
+import { triggerFileDownload } from '~/features/tools/utils/trigger-file-download';
 
 const PRESET_OPTIONS: { value: CropPreset; label: string }[] = [
   { value: 'free', label: 'Freeform' },
@@ -52,58 +47,7 @@ const DEFAULT_CROP_RECT: NormalizedRect = {
   height: 0.996,
 };
 
-interface CropNewRunOptions {
-  pageNumber: number;
-  cropRect: NormalizedRect | null;
-}
-
-function isCropNewRunOptions(value: unknown): value is CropNewRunOptions {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const options = value as Partial<CropNewRunOptions>;
-  return (
-    Number.isInteger(options.pageNumber) &&
-    typeof options.cropRect === 'object' &&
-    options.cropRect !== null
-  );
-}
-
-function triggerFileDownload(blob: Blob, fileName: string) {
-  const objectUrl = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = objectUrl;
-  link.download = fileName;
-  link.click();
-  URL.revokeObjectURL(objectUrl);
-}
-
-async function runCropNew(
-  { files }: ToolModuleRunInput,
-  options?: Record<string, unknown>,
-): Promise<CropResult> {
-  const sourceFile = files.at(0);
-  if (!sourceFile) {
-    throw new Error('Select a PDF file before cropping.');
-  }
-
-  if (!isCropNewRunOptions(options) || !hasValidRect(options.cropRect)) {
-    throw new Error('Set a valid crop area before downloading.');
-  }
-
-  const pageNumber = Math.max(1, options.pageNumber);
-
-  return exportCroppedPdf({
-    file: sourceFile,
-    selectedPages: [pageNumber],
-    pageCrops: {
-      [pageNumber]: options.cropRect,
-    },
-  });
-}
-
-function CropNewToolWorkspace() {
+export function CropNewToolWorkspace() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentPreview, setDocumentPreview] = useState<CropDocumentPreview | null>(
     null,
@@ -256,11 +200,11 @@ function CropNewToolWorkspace() {
   if (!selectedFile) {
     return (
       <ToolWorkspace
-        title="Crop PDF New"
+        title="Crop PDF"
         description="Pick a PDF and jump straight into page-by-page cropping."
         inputPanel={
           <PdfFileSelector
-            ariaLabel="Select PDF file for crop new"
+            ariaLabel="Select PDF file for crop"
             onSelect={(files) => {
               void handleFileSelected(files[0]);
             }}
@@ -494,15 +438,3 @@ function CropNewToolWorkspace() {
     </div>
   );
 }
-
-const cropNewToolModule: ToolModule = {
-  meta: {
-    title: 'Crop PDF New',
-    description:
-      'Enter page crop mode immediately and export the cropped current page.',
-  },
-  run: runCropNew,
-  renderWorkspaceContent: () => <CropNewToolWorkspace />,
-};
-
-export default cropNewToolModule;

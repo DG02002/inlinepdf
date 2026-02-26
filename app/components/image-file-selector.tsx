@@ -5,7 +5,7 @@ interface ImageFileSelectorProps {
   multiple?: boolean;
   onSelect: (files: File[]) => void;
   ariaLabel: string;
-  variant?: 'dropzone' | 'inline';
+  variant?: 'dropzone' | 'inline' | 'tile';
   title?: string;
   description?: string;
   buttonLabel?: string;

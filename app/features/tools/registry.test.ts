@@ -23,7 +23,7 @@ describe('tools registry', () => {
   });
 
   it('replaces planned JPG/PNG-to-PDF tools with unified Image-to-PDF', () => {
-    const slugs = toolsRegistry.map((tool) => tool.slug as string);
+    const slugs = toolsRegistry.map((tool) => tool.slug);
 
     expect(slugs).toContain('image-to-pdf');
     expect(slugs).not.toContain('jpg-to-pdf');
