@@ -1,19 +1,10 @@
-import type { MetaFunction } from 'react-router';
-
-import {
-  getActionErrorMessage,
-  type ToolActionResult,
-} from '~/shared/tool-ui/action-result';
-import { getFiles, getString } from '~/platform/files/read-form-data';
-import { takeClientActionFallback } from '~/platform/files/client-action-fallback';
-import {
-  MAX_BATCH_TOTAL_BYTES,
-  MAX_MERGE_FILES,
-  validateFiles,
-} from '~/platform/files/security/file-validation';
+import type { Route } from './+types/route';
+import { getFiles } from '~/platform/files/read-form-data';
 import { triggerFileDownload } from '~/platform/files/trigger-file-download';
+import { createToolRouteModule } from '~/shared/tool-ui/create-tool-route-module';
 
 import { mergeToolDefinition } from './definition';
+import type { MergeResult } from './models';
 import { MergeToolScreen } from './screen';
 import { mergePdf } from './use-cases/merge-pdf';
 
@@ -21,54 +12,36 @@ interface MergeActionPayload {
   files: File[];
 }
 
-export const meta: MetaFunction = () => [
-  { title: `${mergeToolDefinition.title} | InlinePDF` },
-  {
-    name: 'description',
-    content: mergeToolDefinition.shortDescription,
+const routeModule = createToolRouteModule<
+  MergeActionPayload,
+  { files: File[] },
+  MergeResult
+>({
+  definition: mergeToolDefinition,
+  errorMessage: 'Unable to merge the selected PDF files.',
+  parseInput({ formData, fallbackPayload }) {
+    const files = getFiles(formData, 'files[]');
+    return {
+      files: files.length > 0 ? files : (fallbackPayload?.files ?? []),
+    };
   },
-];
+  execute({ files }) {
+    return mergePdf({ files });
+  },
+  onSuccess(result) {
+    triggerFileDownload(result.blob, result.fileName);
+  },
+  getSuccessMessage() {
+    return 'Merged PDF prepared.';
+  },
+});
 
-export function HydrateFallback() {
-  return <p className="text-sm text-muted-foreground">Loading merge tool...</p>;
+export function meta() {
+  return routeModule.meta();
 }
 
-export async function clientAction({
-  request,
-}: {
-  request: Request;
-}): Promise<ToolActionResult> {
-  const formData = await request.formData();
-  const submissionId = getString(formData, 'submissionId');
-  const fallbackPayload = submissionId
-    ? (takeClientActionFallback(submissionId) as MergeActionPayload | null)
-    : null;
-  const files = getFiles(formData, 'files[]');
-  const resolvedFiles =
-    files.length > 0 ? files : (fallbackPayload?.files ?? []);
-
-  if (resolvedFiles.length < 2) {
-    return { ok: false, message: 'Add at least two PDF files before merging.' };
-  }
-
-  try {
-    await validateFiles(resolvedFiles, {
-      kind: 'pdf',
-      maxFiles: MAX_MERGE_FILES,
-      maxBatchTotalBytes: MAX_BATCH_TOTAL_BYTES,
-    });
-    const result = await mergePdf({ files: resolvedFiles });
-    triggerFileDownload(result.blob, result.fileName);
-    return {
-      ok: true,
-      message: 'Merged PDF is ready and download has started.',
-    };
-  } catch (error: unknown) {
-    return getActionErrorMessage(
-      error,
-      'Merge failed. Please check your PDF files and try again.',
-    );
-  }
+export function clientAction(args: Route.ClientActionArgs) {
+  return routeModule.clientAction(args);
 }
 
 export default function MergeRoute() {

@@ -139,6 +139,45 @@ export function isShippingLabelSortDirection(
 
 export { isShippingLabelBrand };
 
+interface PrepareShippingLabelsInput {
+  file: File | null;
+  brand: ShippingLabelBrand;
+  outputPageSize: string | null | undefined;
+  pickupPartnerDirection: string | null | undefined;
+  skuDirection: string | null | undefined;
+}
+
+export async function prepareShippingLabels({
+  file,
+  brand,
+  outputPageSize,
+  pickupPartnerDirection,
+  skuDirection,
+}: PrepareShippingLabelsInput): Promise<ShippingLabelExtractionResult> {
+  if (!file) {
+    throw new Error('Select a PDF file before preparing label pages.');
+  }
+
+  if (!isShippingLabelOutputPageSize(outputPageSize)) {
+    throw new Error('Select a valid output page size.');
+  }
+
+  return extractShippingLabels(file, {
+    brand,
+    outputPageSize,
+    sort: {
+      pickupPartnerDirection: isShippingLabelSortDirection(
+        pickupPartnerDirection,
+      )
+        ? pickupPartnerDirection
+        : null,
+      skuDirection: isShippingLabelSortDirection(skuDirection)
+        ? skuDirection
+        : null,
+    },
+  });
+}
+
 function getItemPosition(
   item: TextContentItemLike,
 ): { x: number; y: number } | null {
@@ -445,9 +484,11 @@ export async function extractShippingLabels(
   }
 
   const sourceBytes = new Uint8Array(await file.arrayBuffer());
-  const sourceDocument = await PDFDocument.load(sourceBytes);
   const outputDocument = await PDFDocument.create();
-  const pdfjs = await loadPdfJsModule();
+  const [sourceDocument, pdfjs] = await Promise.all([
+    PDFDocument.load(sourceBytes),
+    loadPdfJsModule(),
+  ]);
   const loadingTask = pdfjs.getDocument({ data: sourceBytes });
 
   let pagesProcessed = 0;

@@ -1,4 +1,5 @@
-import { Add01Icon, FileUploadIcon } from '@hugeicons/core-free-icons';
+import Add01Icon from '@hugeicons/core-free-icons/Add01Icon';
+import FileUploadIcon from '@hugeicons/core-free-icons/FileUploadIcon';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { type ChangeEvent, type DragEvent, useRef, useState } from 'react';
 
@@ -78,12 +79,14 @@ export function PdfFileSelector({
     }
   }
 
-  const defaultDropzoneTitle = 'Upload files';
+  const defaultDropzoneTitle = 'Add Files';
   const defaultDropzoneDescription = (
     <>
-      Drag & drop your {accept.includes('image') ? 'images' : 'PDFs'} here, or{' '}
-      <span className="font-semibold underline underline-offset-4">browse</span>{' '}
-      to upload.
+      Drop {accept.includes('image') ? 'images' : 'PDF files'} here, or{' '}
+      <span className="font-semibold underline underline-offset-4">
+        browse files
+      </span>
+      .
     </>
   );
 
@@ -113,7 +116,7 @@ export function PdfFileSelector({
           onClick={openPicker}
         >
           <HugeiconsIcon icon={Add01Icon} size={18} />
-          {buttonLabel ?? 'Select more PDF files'}
+          {buttonLabel ?? 'Add More PDF Files'}
         </Button>
       ) : variant === 'tile' ? (
         <Button
@@ -133,7 +136,7 @@ export function PdfFileSelector({
                 <HugeiconsIcon icon={Add01Icon} size={20} />
               </div>
               <p className="text-sm font-semibold tracking-tight sm:text-base">
-                {buttonLabel ?? 'Add more files'}
+                {buttonLabel ?? 'Add More Files'}
               </p>
             </CardContent>
           </Card>

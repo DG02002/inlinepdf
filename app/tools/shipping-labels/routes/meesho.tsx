@@ -1,23 +1,24 @@
-/* eslint-disable react-refresh/only-export-components */
+import type { Route } from './+types/meesho';
 import { meeshoShippingLabelsToolDefinition } from '../definitions';
-import {
-  createShippingLabelClientAction,
-  createShippingLabelHydrateFallback,
-  createShippingLabelMeta,
-  ShippingLabelRoute,
-} from '../shared-route';
+import { ShippingLabelsToolScreen } from '../screen';
+import { createShippingLabelRouteModule } from '../create-route-module';
 
-export const meta = createShippingLabelMeta(meeshoShippingLabelsToolDefinition);
-
-export const HydrateFallback = createShippingLabelHydrateFallback(
-  meeshoShippingLabelsToolDefinition.title,
+const routeModule = createShippingLabelRouteModule(
+  meeshoShippingLabelsToolDefinition,
+  'meesho',
 );
 
-export const clientAction = createShippingLabelClientAction('meesho');
+export function meta() {
+  return routeModule.meta();
+}
+
+export function clientAction(args: Route.ClientActionArgs) {
+  return routeModule.clientAction(args);
+}
 
 export default function MeeshoShippingLabelsRoute() {
   return (
-    <ShippingLabelRoute
+    <ShippingLabelsToolScreen
       brand="meesho"
       title={meeshoShippingLabelsToolDefinition.title}
       description={meeshoShippingLabelsToolDefinition.shortDescription}

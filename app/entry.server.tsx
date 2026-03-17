@@ -1,7 +1,15 @@
-import type { EntryContext } from 'react-router';
+import type { EntryContext, HandleErrorFunction } from 'react-router';
 import { ServerRouter } from 'react-router';
 import { isbot } from 'isbot';
 import { renderToReadableStream } from 'react-dom/server';
+
+export const handleError: HandleErrorFunction = (error, { request }) => {
+  if (request.signal.aborted) {
+    return;
+  }
+
+  console.error(error);
+};
 
 export default async function handleRequest(
   request: Request,
@@ -9,21 +17,16 @@ export default async function handleRequest(
   responseHeaders: Headers,
   routerContext: EntryContext,
 ) {
-  let shellRendered = false;
   const userAgent = request.headers.get('user-agent');
 
   const body = await renderToReadableStream(
     <ServerRouter context={routerContext} url={request.url} />,
     {
-      onError(error: unknown) {
+      onError() {
         responseStatusCode = 500;
-        if (shellRendered) {
-          console.error(error);
-        }
       },
     },
   );
-  shellRendered = true;
 
   if ((userAgent && isbot(userAgent)) || routerContext.isSpaMode) {
     await body.allReady;

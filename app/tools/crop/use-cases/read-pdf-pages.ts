@@ -20,11 +20,13 @@ function clampScale(scale: number): number {
 
 export async function readPdfPages(file: File): Promise<CropDocumentPreview> {
   await validatePdfFile(file);
-  const originalBytes = new Uint8Array(await file.arrayBuffer());
+  const [sourceBuffer, pdfjs] = await Promise.all([
+    file.arrayBuffer(),
+    loadPdfJsModule(),
+  ]);
+  const originalBytes = new Uint8Array(sourceBuffer);
   const bytes = new Uint8Array(originalBytes.byteLength);
   bytes.set(originalBytes);
-
-  const pdfjs = await loadPdfJsModule();
   const loadingTask = pdfjs.getDocument({ data: bytes });
 
   try {

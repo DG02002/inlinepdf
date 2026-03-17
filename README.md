@@ -1,11 +1,11 @@
 # InlinePDF
 
-InlinePDF is a local-first PDF toolkit and iLovePDF alternative.
+InlinePDF is a local-first PDF app for working with PDF and image files on device.
 
 ## Core Product Rules
 
-- All PDF processing runs client-side in the browser.
-- No file uploads.
+- All PDF processing runs on device.
+- Files are never sent to a server.
 - No server-side PDF processing.
 - No authentication, database, or user accounts.
 - Features are shipped only when they can run fully local-first.
@@ -24,8 +24,8 @@ InlinePDF is a local-first PDF toolkit and iLovePDF alternative.
 
 - React Router + Vite + TypeScript
 - Tailwind CSS + shadcn component primitives
-- PDF-Lib for merge processing
-- PDF.js adapter scaffold for future local-first tooling
+- PDF-Lib for PDF merging
+- PDF.js adapter scaffold for future local-first tools
 - Cloudflare Workers deployment target
 
 ## Folder Architecture
@@ -34,7 +34,7 @@ InlinePDF is a local-first PDF toolkit and iLovePDF alternative.
 - `app/components/ui/*` shadcn/base-ui primitives
 - `app/shared/navigation/*` header and mobile navigation built from tool definitions
 - `app/shared/tool-ui/*` reusable workspace UI and action helpers
-- `app/platform/files/*` file validation, form parsing, client fallbacks, downloads
+- `app/platform/files/*` file validation, form parsing, client fallbacks, file saving
 - `app/platform/pdf/*` low-level PDF infrastructure (`pdf-lib`, `pdfjs`)
 - `app/tools/catalog/*` implemented tool definitions used by home and nav
 - `app/tools/<tool>/*` vertical slices owning route, screen, models, and use-cases

@@ -1,26 +1,14 @@
-import type { PageSizeSelectId } from '~/platform/pdf/page-size-options';
+import {
+  SHIPPING_LABEL_PAGE_SIZE_IDS,
+  type PageSizeSelectId,
+} from '~/platform/pdf/page-size-options';
 
 export const SHIPPING_LABEL_BRANDS = ['meesho', 'amazon', 'flipkart'] as const;
 
 export type ShippingLabelBrand = (typeof SHIPPING_LABEL_BRANDS)[number];
 
-export const SHIPPING_LABEL_OUTPUT_PAGE_SIZES = [
-  'auto',
-  'a3',
-  'a4',
-  'a5',
-  'b5',
-  'envelope10',
-  'envelopeChoukei3',
-  'envelopeDl',
-  'jisB5',
-  'roc16k',
-  'superBA3',
-  'tabloid',
-  'tabloidOversize',
-  'legal',
-  'letter',
-] as const satisfies readonly PageSizeSelectId[];
+export const SHIPPING_LABEL_OUTPUT_PAGE_SIZES =
+  SHIPPING_LABEL_PAGE_SIZE_IDS satisfies readonly PageSizeSelectId[];
 
 export type ShippingLabelOutputPageSize =
   (typeof SHIPPING_LABEL_OUTPUT_PAGE_SIZES)[number];

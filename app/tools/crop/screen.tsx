@@ -1,7 +1,7 @@
-import { type SyntheticEvent, useReducer, useRef } from 'react';
-import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
+import type { SyntheticEvent } from 'react';
+import ArrowLeft01Icon from '@hugeicons/core-free-icons/ArrowLeft01Icon';
+import ArrowRight01Icon from '@hugeicons/core-free-icons/ArrowRight01Icon';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { useFetcher } from 'react-router';
 
 import { PdfFileSelector } from '~/components/pdf-file-selector';
 import {
@@ -26,48 +26,31 @@ import {
   SelectValue,
 } from '~/components/ui/select';
 import { Spinner } from '~/components/ui/spinner';
-import { saveClientActionFallback } from '~/platform/files/client-action-fallback';
 import {
-  PageSizeOptionLabel,
   STANDARD_PAGE_SIZE_IDS,
-  STANDARD_PAGE_SIZE_OPTIONS,
+  getStandardPageSizeOption,
+  isStandardPageSizeId,
 } from '~/platform/pdf/page-size-options';
+import { PageSizeOptionLabel } from '~/shared/tool-ui/page-size-option-label';
 import { PdfCropEditor } from '~/tools/crop/components/pdf-crop-editor';
-import { hasValidRect } from '~/tools/crop/domain/coordinate-math';
 import type {
   CropDocumentPreview,
   CropPreset,
   NormalizedRect,
   PageCropState,
 } from '~/tools/crop/models';
-import type { ToolActionResult } from '~/shared/tool-ui/action-result';
 import { ToolWorkspace } from '~/shared/tool-ui/tool-workspace';
 import { useSuccessToast } from '~/shared/tool-ui/use-success-toast';
+import { useCropWorkspace } from '~/tools/crop/use-crop-workspace';
 
-import { readPdfPages } from './use-cases/read-pdf-pages';
+const PAGE_SIZE_PRESET_OPTIONS = STANDARD_PAGE_SIZE_IDS.map((value) => ({
+  value,
+  label: getStandardPageSizeOption(value).label,
+}));
 
 const PRESET_OPTIONS: { value: CropPreset; label: string }[] = [
   { value: 'free', label: 'Freeform' },
-  { value: 'a3', label: STANDARD_PAGE_SIZE_OPTIONS.a3.label },
-  { value: 'a4', label: STANDARD_PAGE_SIZE_OPTIONS.a4.label },
-  { value: 'a5', label: STANDARD_PAGE_SIZE_OPTIONS.a5.label },
-  { value: 'b5', label: STANDARD_PAGE_SIZE_OPTIONS.b5.label },
-  { value: 'envelope10', label: STANDARD_PAGE_SIZE_OPTIONS.envelope10.label },
-  {
-    value: 'envelopeChoukei3',
-    label: STANDARD_PAGE_SIZE_OPTIONS.envelopeChoukei3.label,
-  },
-  { value: 'envelopeDl', label: STANDARD_PAGE_SIZE_OPTIONS.envelopeDl.label },
-  { value: 'jisB5', label: STANDARD_PAGE_SIZE_OPTIONS.jisB5.label },
-  { value: 'roc16k', label: STANDARD_PAGE_SIZE_OPTIONS.roc16k.label },
-  { value: 'superBA3', label: STANDARD_PAGE_SIZE_OPTIONS.superBA3.label },
-  { value: 'tabloid', label: STANDARD_PAGE_SIZE_OPTIONS.tabloid.label },
-  {
-    value: 'tabloidOversize',
-    label: STANDARD_PAGE_SIZE_OPTIONS.tabloidOversize.label,
-  },
-  { value: 'legal', label: STANDARD_PAGE_SIZE_OPTIONS.legal.label },
-  { value: 'letter', label: STANDARD_PAGE_SIZE_OPTIONS.letter.label },
+  ...PAGE_SIZE_PRESET_OPTIONS,
   { value: '1:1', label: '1:1' },
   { value: '4:3', label: '4:3' },
   { value: '16:9', label: '16:9' },
@@ -78,16 +61,8 @@ function isCropPreset(value: string): value is CropPreset {
 }
 
 function renderCropPresetLabel(value: CropPreset) {
-  if (
-    STANDARD_PAGE_SIZE_IDS.includes(
-      value as (typeof STANDARD_PAGE_SIZE_IDS)[number],
-    )
-  ) {
-    return PageSizeOptionLabel(
-      STANDARD_PAGE_SIZE_OPTIONS[
-        value as (typeof STANDARD_PAGE_SIZE_IDS)[number]
-      ],
-    );
+  if (isStandardPageSizeId(value)) {
+    return <PageSizeOptionLabel {...getStandardPageSizeOption(value)} />;
   }
 
   return (
@@ -95,172 +70,8 @@ function renderCropPresetLabel(value: CropPreset) {
   );
 }
 
-const DEFAULT_CROP_RECT: NormalizedRect = {
-  x: 0.002,
-  y: 0.002,
-  width: 0.996,
-  height: 0.996,
-};
-
 const mobileAspectSelectId = 'crop-mobile-aspect-select';
 const desktopAspectSelectId = 'crop-desktop-aspect-select';
-
-interface CropWorkspaceState {
-  selectedFile: File | null;
-  documentPreview: CropDocumentPreview | null;
-  activePageNumber: number | null;
-  pageInputValue: string;
-  pageCrops: PageCropState;
-  preset: CropPreset;
-  isReadingPdf: boolean;
-  isExportDialogOpen: boolean;
-  localErrorMessage: string | null;
-}
-
-type CropWorkspaceAction =
-  | { type: 'fileSelectionStarted'; file: File }
-  | { type: 'fileSelectionSucceeded'; preview: CropDocumentPreview }
-  | { type: 'fileSelectionFailed'; message: string }
-  | { type: 'pageSelected'; pageNumber: number }
-  | { type: 'pageOffsetRequested'; offset: number }
-  | { type: 'pageInputChanged'; value: string }
-  | { type: 'cropChanged'; pageNumber: number; cropRect: NormalizedRect | null }
-  | { type: 'cropReset' }
-  | { type: 'presetChanged'; preset: CropPreset }
-  | { type: 'exportDialogChanged'; open: boolean }
-  | { type: 'localErrorSet'; message: string }
-  | { type: 'localErrorCleared' };
-
-const initialState: CropWorkspaceState = {
-  selectedFile: null,
-  documentPreview: null,
-  activePageNumber: null,
-  pageInputValue: '1',
-  pageCrops: {},
-  preset: 'free',
-  isReadingPdf: false,
-  isExportDialogOpen: false,
-  localErrorMessage: null,
-};
-
-function ensurePageCrop(
-  pageCrops: PageCropState,
-  pageNumber: number,
-): PageCropState {
-  return pageNumber in pageCrops
-    ? pageCrops
-    : { ...pageCrops, [pageNumber]: { ...DEFAULT_CROP_RECT } };
-}
-
-function applySelectedPage(
-  state: CropWorkspaceState,
-  pageNumber: number,
-): CropWorkspaceState {
-  if (!state.documentPreview) {
-    return state;
-  }
-
-  const clamped = Math.min(
-    Math.max(pageNumber, 1),
-    state.documentPreview.pageCount,
-  );
-
-  return {
-    ...state,
-    activePageNumber: clamped,
-    pageInputValue: String(clamped),
-    pageCrops: ensurePageCrop(state.pageCrops, clamped),
-    localErrorMessage: null,
-  };
-}
-
-function cropWorkspaceReducer(
-  state: CropWorkspaceState,
-  action: CropWorkspaceAction,
-): CropWorkspaceState {
-  switch (action.type) {
-    case 'fileSelectionStarted':
-      return {
-        selectedFile: action.file,
-        documentPreview: null,
-        activePageNumber: null,
-        pageInputValue: '1',
-        pageCrops: {},
-        preset: 'free',
-        isReadingPdf: true,
-        isExportDialogOpen: false,
-        localErrorMessage: null,
-      };
-    case 'fileSelectionSucceeded':
-      return {
-        ...state,
-        documentPreview: action.preview,
-        activePageNumber: 1,
-        pageInputValue: '1',
-        pageCrops: { 1: { ...DEFAULT_CROP_RECT } },
-        isReadingPdf: false,
-        localErrorMessage: null,
-      };
-    case 'fileSelectionFailed':
-      return {
-        ...initialState,
-        localErrorMessage: action.message,
-      };
-    case 'pageSelected':
-      return applySelectedPage(state, action.pageNumber);
-    case 'pageOffsetRequested':
-      return state.activePageNumber === null
-        ? state
-        : applySelectedPage(state, state.activePageNumber + action.offset);
-    case 'pageInputChanged':
-      return {
-        ...state,
-        pageInputValue: action.value,
-      };
-    case 'cropChanged':
-      return {
-        ...state,
-        pageCrops: {
-          ...state.pageCrops,
-          [action.pageNumber]: action.cropRect,
-        },
-        localErrorMessage: null,
-      };
-    case 'cropReset':
-      return state.activePageNumber === null
-        ? state
-        : {
-            ...state,
-            pageCrops: {
-              ...state.pageCrops,
-              [state.activePageNumber]: { ...DEFAULT_CROP_RECT },
-            },
-            localErrorMessage: null,
-          };
-    case 'presetChanged':
-      return {
-        ...state,
-        preset: action.preset,
-      };
-    case 'exportDialogChanged':
-      return {
-        ...state,
-        isExportDialogOpen: action.open,
-      };
-    case 'localErrorSet':
-      return {
-        ...state,
-        localErrorMessage: action.message,
-      };
-    case 'localErrorCleared':
-      return {
-        ...state,
-        localErrorMessage: null,
-      };
-    default:
-      return state;
-  }
-}
 
 function CropAspectField({
   id,
@@ -431,14 +242,14 @@ function CropActionBar({
             onClick={onResetCrop}
             className="whitespace-nowrap"
           >
-            Reset crop
+            Reset Crop
           </Button>
           <Button
             disabled={!canOpenExportDialog}
             onClick={onOpenExportDialog}
             className="whitespace-nowrap"
           >
-            {isExporting ? 'Cropping...' : 'Crop and Download'}
+            {isExporting ? 'Cropping...' : 'Crop PDF'}
           </Button>
         </div>
       </div>
@@ -450,14 +261,14 @@ function CropActionBar({
           onClick={onResetCrop}
           className="w-full"
         >
-          Reset crop
+          Reset Crop
         </Button>
         <Button
           disabled={!canOpenExportDialog}
           onClick={onOpenExportDialog}
           className="w-full"
         >
-          {isExporting ? 'Cropping...' : 'Crop and Download'}
+          {isExporting ? 'Cropping...' : 'Crop PDF'}
         </Button>
       </div>
 
@@ -518,138 +329,30 @@ function CropPreviewPanel({
 }
 
 export function CropToolScreen() {
-  const fetcher = useFetcher<ToolActionResult>();
-  const selectionTokenRef = useRef(0);
-  const [state, dispatch] = useReducer(cropWorkspaceReducer, initialState);
-  const isExporting = fetcher.state !== 'idle';
+  const workspace = useCropWorkspace();
 
-  const totalPages = state.documentPreview?.pageCount ?? 0;
-  const activePageNumber = state.activePageNumber;
-  const hasActivePage = activePageNumber !== null && activePageNumber >= 1;
-  const activeCropRect =
-    activePageNumber === null
-      ? null
-      : (state.pageCrops[activePageNumber] ?? null);
-  const canGoPrevious = activePageNumber !== null && activePageNumber > 1;
-  const canGoNext = activePageNumber !== null && activePageNumber < totalPages;
-  const canExport =
-    !!state.selectedFile &&
-    hasActivePage &&
-    hasValidRect(activeCropRect) &&
-    !state.isReadingPdf &&
-    !isExporting;
-  const canOpenExportDialog =
-    !!state.selectedFile &&
-    hasActivePage &&
-    !state.isReadingPdf &&
-    !isExporting;
-  const actionErrorMessage =
-    fetcher.data && !fetcher.data.ok ? fetcher.data.message : null;
-  const errorMessage = state.localErrorMessage ?? actionErrorMessage;
-  const successMessage = fetcher.data?.ok ? fetcher.data.message : null;
-  const isBusy = state.isReadingPdf || isExporting;
-
-  useSuccessToast(successMessage);
-
-  async function handleFileSelected(file: File) {
-    const selectionToken = selectionTokenRef.current + 1;
-    selectionTokenRef.current = selectionToken;
-    dispatch({ type: 'fileSelectionStarted', file });
-
-    try {
-      const preview = await readPdfPages(file);
-      if (selectionTokenRef.current !== selectionToken) {
-        return;
-      }
-
-      if (preview.pageCount < 1) {
-        throw new Error('This PDF has no pages to crop.');
-      }
-
-      dispatch({ type: 'fileSelectionSucceeded', preview });
-    } catch (error: unknown) {
-      if (selectionTokenRef.current !== selectionToken) {
-        return;
-      }
-
-      const fallback = 'Failed to read PDF pages.';
-      dispatch({
-        type: 'fileSelectionFailed',
-        message: error instanceof Error ? error.message : fallback,
-      });
-    }
-  }
+  useSuccessToast(workspace.successMessage);
 
   function handlePageJump(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
-    const next = Number.parseInt(state.pageInputValue, 10);
-    if (!Number.isFinite(next)) {
-      dispatch({
-        type: 'pageInputChanged',
-        value: state.activePageNumber ? String(state.activePageNumber) : '1',
-      });
-      return;
-    }
-
-    dispatch({ type: 'pageSelected', pageNumber: next });
+    workspace.submitPageJump();
   }
 
-  function handleExport(mode: 'current' | 'allWithOriginalOthers') {
-    if (
-      !state.selectedFile ||
-      !state.activePageNumber ||
-      !state.documentPreview
-    ) {
-      return;
-    }
-
-    const cropRect = state.pageCrops[state.activePageNumber];
-    if (!cropRect || !hasValidRect(cropRect)) {
-      dispatch({
-        type: 'localErrorSet',
-        message: 'Set a valid crop area before downloading.',
-      });
-      return;
-    }
-
-    dispatch({ type: 'exportDialogChanged', open: false });
-    dispatch({ type: 'localErrorCleared' });
-
-    const activeCrop: NormalizedRect = cropRect;
-    const payload = {
-      file: state.selectedFile,
-      pageNumber: state.activePageNumber,
-      totalPages: state.documentPreview.pageCount,
-      mode,
-      cropRect: activeCrop,
-    };
-    const submissionId = saveClientActionFallback(payload);
-    const formData = new FormData();
-    formData.set('file', state.selectedFile);
-    formData.set('pageNumber', String(state.activePageNumber));
-    formData.set('totalPages', String(state.documentPreview.pageCount));
-    formData.set('mode', mode);
-    formData.set('cropRect', JSON.stringify(activeCrop));
-    formData.set('submissionId', submissionId);
-
-    void fetcher.submit(formData, { method: 'post' });
-  }
-
-  if (!state.selectedFile) {
+  if (!workspace.selectedFile) {
     return (
       <ToolWorkspace
         title="Crop PDF"
-        description="Pick a PDF and jump straight into page-by-page cropping."
+        description="Choose a PDF and crop pages one at a time."
         inputPanel={
           <PdfFileSelector
             ariaLabel="Select PDF file for crop"
             onSelect={(files) => {
-              void handleFileSelected(files[0]);
+              void workspace.handleFileSelected(files[0]);
             }}
-            disabled={isBusy}
+            disabled={workspace.isBusy}
           />
         }
-        errorMessage={errorMessage}
+        errorMessage={workspace.errorMessage}
       />
     );
   }
@@ -659,116 +362,103 @@ export function CropToolScreen() {
       <div className="flex h-full flex-col">
         <main className="min-h-0 flex flex-1 flex-col overflow-hidden px-2 py-2 md:px-4 md:py-3">
           <div className="pb-2 text-center">
-            <p className="text-sm font-medium">{state.selectedFile.name}</p>
+            <p className="text-sm font-medium">{workspace.selectedFile.name}</p>
           </div>
           <div className="flex items-center justify-center pb-2 md:hidden">
             <CropAspectField
               id={mobileAspectSelectId}
-              preset={state.preset}
-              disabled={isBusy}
+              preset={workspace.preset}
+              disabled={workspace.isBusy}
               className="flex items-center gap-2"
               onPresetChange={(preset) => {
-                dispatch({ type: 'presetChanged', preset });
+                workspace.changePreset(preset);
               }}
             />
           </div>
 
           <CropPreviewPanel
-            selectedFile={state.selectedFile}
-            documentPreview={state.documentPreview}
-            activePageNumber={state.activePageNumber}
-            isReadingPdf={state.isReadingPdf}
-            preset={state.preset}
-            pageCrops={state.pageCrops}
+            selectedFile={workspace.selectedFile}
+            documentPreview={workspace.documentPreview}
+            activePageNumber={workspace.activePageNumber}
+            isReadingPdf={workspace.isReadingPdf}
+            preset={workspace.preset}
+            pageCrops={workspace.pageCrops}
             onCropChange={(pageNumber, cropRect) => {
-              dispatch({ type: 'cropChanged', pageNumber, cropRect });
+              workspace.changeCrop(pageNumber, cropRect);
             }}
           />
         </main>
 
         <div className="px-3 pb-2 md:px-4">
           <CropNavigationBar
-            canGoPrevious={canGoPrevious}
-            canGoNext={canGoNext}
-            isBusy={isBusy}
-            pageInputValue={state.pageInputValue}
-            totalPages={totalPages}
+            canGoPrevious={workspace.canGoPrevious}
+            canGoNext={workspace.canGoNext}
+            isBusy={workspace.isBusy}
+            pageInputValue={workspace.pageInputValue}
+            totalPages={workspace.totalPages}
             onPrevious={() => {
-              if (!state.activePageNumber) {
-                return;
-              }
-
-              dispatch({ type: 'pageOffsetRequested', offset: -1 });
+              workspace.goToPreviousPage();
             }}
             onNext={() => {
-              if (!state.activePageNumber) {
-                return;
-              }
-
-              dispatch({ type: 'pageOffsetRequested', offset: 1 });
+              workspace.goToNextPage();
             }}
             onPageInputChange={(value) => {
-              dispatch({
-                type: 'pageInputChanged',
-                value: value.replace(/\D/g, ''),
-              });
+              workspace.updatePageInput(value);
             }}
             onPageJump={handlePageJump}
           />
         </div>
 
         <CropActionBar
-          preset={state.preset}
-          isBusy={isBusy}
-          hasActivePage={hasActivePage}
-          canOpenExportDialog={canOpenExportDialog}
-          isExporting={isExporting}
-          errorMessage={errorMessage}
+          preset={workspace.preset}
+          isBusy={workspace.isBusy}
+          hasActivePage={workspace.hasActivePage}
+          canOpenExportDialog={workspace.canOpenExportDialog}
+          isExporting={workspace.isExporting}
+          errorMessage={workspace.errorMessage}
           onPresetChange={(preset) => {
-            dispatch({ type: 'presetChanged', preset });
+            workspace.changePreset(preset);
           }}
           onResetCrop={() => {
-            dispatch({ type: 'cropReset' });
+            workspace.resetCrop();
           }}
           onOpenExportDialog={() => {
-            dispatch({ type: 'exportDialogChanged', open: true });
+            workspace.openExportDialog();
           }}
         />
       </div>
 
       <AlertDialog
-        open={state.isExportDialogOpen}
+        open={workspace.isExportDialogOpen}
         onOpenChange={(open) => {
-          if (isExporting) {
-            return;
-          }
-
-          dispatch({ type: 'exportDialogChanged', open });
+          workspace.closeOrSetExportDialog(open);
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Choose Download Scope</AlertDialogTitle>
+            <AlertDialogTitle>Choose Export Scope</AlertDialogTitle>
             <AlertDialogDescription>
-              Download only the cropped current page, or the full document with
-              only this page cropped.
+              Export the cropped page only, or export the full document with
+              this page cropped.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isExporting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={workspace.isExporting}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
-              disabled={isExporting || !canExport}
+              disabled={!workspace.canExport}
               onClick={() => {
-                handleExport('allWithOriginalOthers');
+                workspace.handleExport('allWithOriginalOthers');
               }}
               className="border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
             >
               Full document
             </AlertDialogAction>
             <AlertDialogAction
-              disabled={isExporting || !canExport}
+              disabled={!workspace.canExport}
               onClick={() => {
-                handleExport('current');
+                workspace.handleExport('current');
               }}
             >
               Current page only

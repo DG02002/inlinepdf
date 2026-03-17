@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import { href, Link } from 'react-router';
 
 import { ThemedBrandImage } from '~/components/branding/themed-brand-image';
 import { SiteNavigation } from '~/shared/navigation/site-navigation';
@@ -14,7 +14,8 @@ export function Header() {
       >
         <div className="flex min-w-0 items-center gap-5">
           <Link
-            to="/"
+            to={href('/')}
+            prefetch="intent"
             className="inline-flex items-center gap-2 tracking-tight"
           >
             <ThemedBrandImage

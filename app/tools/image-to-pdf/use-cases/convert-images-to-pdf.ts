@@ -14,31 +14,23 @@ export function isImageToPdfQuality(
   return value === 'high' || value === 'medium' || value === 'low';
 }
 
-function isImageToPdfRunOptions(value: unknown): value is ImageToPdfRunOptions {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const options = value as Partial<ImageToPdfRunOptions>;
-  return (
-    isImageToPdfQuality(options.quality) &&
-    (options.onProgress === undefined ||
-      typeof options.onProgress === 'function')
-  );
+interface ConvertImagesToPdfDocumentInput {
+  files: File[];
+  quality: unknown;
+  onProgress?: ImageToPdfRunOptions['onProgress'];
 }
 
 export async function convertImagesToPdfDocument(
-  { files }: { files: File[] },
-  options?: ImageToPdfRunOptions,
+  { files, quality, onProgress }: ConvertImagesToPdfDocumentInput,
 ): Promise<ImageToPdfResult> {
-  if (!isImageToPdfRunOptions(options)) {
+  if (!isImageToPdfQuality(quality)) {
     throw new Error('Select an output quality before converting.');
   }
 
   const input: ConvertImagesToPdfInput = {
     files,
-    quality: options.quality,
-    onProgress: options.onProgress,
+    quality,
+    onProgress,
   };
   return convertImagesToPdf(input);
 }

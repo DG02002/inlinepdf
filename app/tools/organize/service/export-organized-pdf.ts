@@ -48,7 +48,7 @@ export async function exportOrganizedPdf({
 
   const activePages = validPages.filter((page) => !page.isDeleted);
   if (activePages.length < 1) {
-    throw new Error('Restore at least one page before downloading.');
+    throw new Error('Restore at least one page before exporting.');
   }
 
   const sourceBytes = new Uint8Array(await file.arrayBuffer());
@@ -65,11 +65,13 @@ export async function exportOrganizedPdf({
   }
 
   const outputDocument = await PDFDocument.create();
+  const copiedPages = await outputDocument.copyPages(
+    sourceDocument,
+    activePages.map((pageState) => pageState.sourcePageNumber - 1),
+  );
 
-  for (const pageState of activePages) {
-    const [copiedPage] = await outputDocument.copyPages(sourceDocument, [
-      pageState.sourcePageNumber - 1,
-    ]);
+  for (const [index, pageState] of activePages.entries()) {
+    const copiedPage = copiedPages[index];
 
     const currentAngle = copiedPage.getRotation().angle;
     const rotationDelta =

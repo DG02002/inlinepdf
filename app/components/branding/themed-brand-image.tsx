@@ -1,13 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useRouteLoaderData } from 'react-router';
-
 import { themedBrandingAssets } from '~/lib/branding';
-import {
-  readThemeStateFromDocument,
-  subscribeToThemeChanges,
-  type ResolvedTheme,
-} from '~/lib/theme';
-import type { loader as rootLoader } from '~/root';
+import { useThemeState } from '~/hooks/use-theme-state';
 
 type BrandImageVariant = 'header' | 'hero';
 
@@ -24,26 +16,7 @@ export function ThemedBrandImage({
   loading?: 'eager' | 'lazy';
   variant: BrandImageVariant;
 }) {
-  const rootData = useRouteLoaderData<typeof rootLoader>('root');
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => {
-    if (typeof window === 'undefined') {
-      return rootData?.resolvedTheme ?? 'light';
-    }
-
-    if (document.documentElement.hasAttribute('data-resolved-theme')) {
-      return readThemeStateFromDocument().resolvedTheme;
-    }
-
-    return rootData?.resolvedTheme ?? 'light';
-  });
-
-  useEffect(() => {
-    return subscribeToThemeChanges(({ resolvedTheme: nextResolvedTheme }) => {
-      setResolvedTheme((currentTheme) =>
-        currentTheme === nextResolvedTheme ? currentTheme : nextResolvedTheme,
-      );
-    });
-  }, []);
+  const { resolvedTheme } = useThemeState();
 
   const assets = themedBrandingAssets[resolvedTheme][variant];
 

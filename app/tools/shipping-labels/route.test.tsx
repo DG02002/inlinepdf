@@ -1,17 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const {
-  extractShippingLabelsMock,
+  prepareShippingLabelsMock,
   triggerFileDownloadMock,
-  validatePdfFileMock,
 } = vi.hoisted(() => ({
-  extractShippingLabelsMock: vi.fn(),
+  prepareShippingLabelsMock: vi.fn(),
   triggerFileDownloadMock: vi.fn(),
-  validatePdfFileMock: vi.fn(() => Promise.resolve(undefined)),
-}));
-
-vi.mock('~/platform/files/security/file-validation', () => ({
-  validatePdfFile: validatePdfFileMock,
 }));
 
 vi.mock('~/platform/files/trigger-file-download', () => ({
@@ -19,30 +13,24 @@ vi.mock('~/platform/files/trigger-file-download', () => ({
 }));
 
 vi.mock('./use-cases/extract-shipping-labels', () => ({
-  extractShippingLabels: extractShippingLabelsMock,
-  isShippingLabelOutputPageSize: (value: string | null | undefined) =>
-    [
-      'auto',
-      'a3',
-      'a4',
-      'a5',
-      'b5',
-      'envelope10',
-      'envelopeChoukei3',
-      'envelopeDl',
-      'jisB5',
-      'roc16k',
-      'superBA3',
-      'tabloid',
-      'tabloidOversize',
-      'legal',
-      'letter',
-    ].includes(value ?? ''),
-  isShippingLabelSortDirection: (value: string | null | undefined) =>
-    value === 'asc' || value === 'desc',
-}));
+  prepareShippingLabels: (input: {
+    file: File | null;
+    brand: string;
+    outputPageSize: string | null;
+    pickupPartnerDirection: string | null;
+    skuDirection: string | null;
+  }) => {
+    if (!input.file) {
+      return Promise.reject(
+        new Error('Select a PDF file before preparing label pages.'),
+      );
+    }
 
-import { createShippingLabelClientAction } from './shared-route';
+    return prepareShippingLabelsMock(input) as Promise<unknown>;
+  },
+}));
+import { amazonShippingLabelsToolDefinition } from './definitions';
+import { createShippingLabelRouteModule } from './create-route-module';
 
 function createRequest(formData: FormData) {
   return {
@@ -51,8 +39,18 @@ function createRequest(formData: FormData) {
 }
 
 describe('shipping labels route clientAction', () => {
-  const meeshoClientAction = createShippingLabelClientAction('meesho');
-  const amazonClientAction = createShippingLabelClientAction('amazon');
+  const meeshoClientAction = createShippingLabelRouteModule(
+    {
+      ...amazonShippingLabelsToolDefinition,
+      title: 'Meesho Labels',
+      shortDescription: 'Prepare Meesho label pages from marketplace PDFs.',
+    },
+    'meesho',
+  ).clientAction;
+  const amazonClientAction = createShippingLabelRouteModule(
+    amazonShippingLabelsToolDefinition,
+    'amazon',
+  ).clientAction;
 
   it('rejects requests without a file', async () => {
     const formData = new FormData();
@@ -64,7 +62,7 @@ describe('shipping labels route clientAction', () => {
 
     expect(result).toEqual({
       ok: false,
-      message: 'Select a PDF file before extracting labels.',
+      message: 'Select a PDF file before preparing label pages.',
     });
   });
 
@@ -75,7 +73,7 @@ describe('shipping labels route clientAction', () => {
       new File(['%PDF-1.4'], 'amazon.pdf', { type: 'application/pdf' }),
     );
     formData.set('outputPageSize', 'a4');
-    extractShippingLabelsMock.mockRejectedValueOnce(
+    prepareShippingLabelsMock.mockRejectedValueOnce(
       new Error('Amazon label extraction is not available yet.'),
     );
 
@@ -83,7 +81,6 @@ describe('shipping labels route clientAction', () => {
       request: createRequest(formData),
     });
 
-    expect(validatePdfFileMock).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       ok: false,
       message: 'Amazon label extraction is not available yet.',
@@ -97,7 +94,7 @@ describe('shipping labels route clientAction', () => {
       new File(['%PDF-1.4'], 'meesho.pdf', { type: 'application/pdf' }),
     );
     formData.set('outputPageSize', 'auto');
-    extractShippingLabelsMock.mockRejectedValueOnce(
+    prepareShippingLabelsMock.mockRejectedValueOnce(
       new Error('No Meesho shipping labels were found in this PDF.'),
     );
 
@@ -111,7 +108,7 @@ describe('shipping labels route clientAction', () => {
     });
   });
 
-  it('starts a download and returns extraction stats on success', async () => {
+  it('returns preparation stats on success', async () => {
     const formData = new FormData();
     formData.set(
       'file',
@@ -120,7 +117,7 @@ describe('shipping labels route clientAction', () => {
     formData.set('outputPageSize', 'a4');
     formData.set('pickupPartnerDirection', 'asc');
     formData.set('skuDirection', 'desc');
-    extractShippingLabelsMock.mockResolvedValueOnce({
+    prepareShippingLabelsMock.mockResolvedValueOnce({
       blob: new Blob(['pdf'], { type: 'application/pdf' }),
       fileName: 'meesho-meesho-labels-2026-03-17.pdf',
       pagesProcessed: 10,
@@ -133,17 +130,25 @@ describe('shipping labels route clientAction', () => {
     });
 
     expect(triggerFileDownloadMock).toHaveBeenCalledTimes(1);
-    expect(extractShippingLabelsMock).toHaveBeenCalledWith(expect.any(File), {
+    const firstCall = prepareShippingLabelsMock.mock.calls.at(-1)?.[0] as
+      | {
+          file: File;
+          brand: string;
+          outputPageSize: string;
+          pickupPartnerDirection: string | null;
+          skuDirection: string | null;
+        }
+      | undefined;
+    expect(firstCall).toMatchObject({
       brand: 'meesho',
       outputPageSize: 'a4',
-      sort: {
-        pickupPartnerDirection: 'asc',
-        skuDirection: 'desc',
-      },
+      pickupPartnerDirection: 'asc',
+      skuDirection: 'desc',
     });
+    expect(firstCall?.file).toBeInstanceOf(File);
     expect(result).toEqual({
       ok: true,
-      message: 'Download started with 8 extracted labels.',
+      message: 'Prepared 8 label pages.',
       result: {
         pagesProcessed: 10,
         labelsExtracted: 8,

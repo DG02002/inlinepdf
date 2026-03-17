@@ -1,14 +1,12 @@
-import {
-  ArrangeIcon,
-  CropIcon,
-  File01Icon,
-  GitMergeIcon,
-  ImageDownloadIcon,
-  ImageUploadIcon,
-  InformationCircleIcon,
-} from '@hugeicons/core-free-icons';
-import { HugeiconsIcon } from '@hugeicons/react';
+import ArrangeIcon from '@hugeicons/core-free-icons/ArrangeIcon';
+import CropIcon from '@hugeicons/core-free-icons/CropIcon';
+import File01Icon from '@hugeicons/core-free-icons/File01Icon';
+import GitMergeIcon from '@hugeicons/core-free-icons/GitMergeIcon';
+import ImageDownloadIcon from '@hugeicons/core-free-icons/ImageDownloadIcon';
+import ImageUploadIcon from '@hugeicons/core-free-icons/ImageUploadIcon';
+import InformationCircleIcon from '@hugeicons/core-free-icons/InformationCircleIcon';
 import { motion } from 'motion/react';
+import { HugeiconsIcon } from '@hugeicons/react';
 import { Link } from 'react-router';
 
 import type { Route } from './+types/home';
@@ -27,7 +25,7 @@ export const meta: Route.MetaFunction = () => {
     {
       name: 'description',
       content:
-        'InlinePDF delivers a cleaner local-first PDF workflow with private in-browser processing and open-source transparency.',
+        'InlinePDF provides local-first PDF tools that process files on device and stay open source.',
     },
   ];
 };
@@ -45,10 +43,10 @@ const toolIconBySlug: Partial<Record<string, typeof File01Icon>> = {
 } as const;
 
 const navigationGroupDescriptions: Record<ToolNavigationGroup, string> = {
-  Organize: 'Clean up and reshape the structure of a PDF.',
-  Convert: 'Move content between formats without upload steps.',
-  Extract: 'Pull out label or page regions with marketplace-specific rules.',
-  Inspect: 'Inspect document internals and metadata locally.',
+  Organize: 'Reorder pages and adjust document structure.',
+  Convert: 'Move between PDF and image formats on device.',
+  Extract: 'Prepare label pages with marketplace-specific rules.',
+  Inspect: 'Review document metadata and font details on device.',
 };
 
 /** Groups shown in the general PDF tools section (excludes Extract). */
@@ -92,10 +90,6 @@ const staggerItem = {
     transition: { duration: 0.45, ease: 'easeOut' as const },
   },
 } as const;
-
-export function HydrateFallback() {
-  return <p className="text-sm text-muted-foreground">Loading home...</p>;
-}
 
 export default function HomeRoute() {
   const firstToolPath = implementedToolDefinitions[0]?.path ?? '/';
@@ -162,7 +156,7 @@ export default function HomeRoute() {
               transition={{ duration: 0.4, delay: 0.15 }}
             >
               <Badge variant="outline">Local-First</Badge>
-              <Badge variant="outline">No Uploads</Badge>
+              <Badge variant="outline">On Device</Badge>
               <Badge variant="outline">Open Source</Badge>
             </motion.div>
             <motion.h1
@@ -171,7 +165,7 @@ export default function HomeRoute() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              PDF tools that work right here
+              PDF tools that stay on device
             </motion.h1>
             <motion.p
               className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
@@ -179,8 +173,8 @@ export default function HomeRoute() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
-              Merge, crop, organize, convert, and extract — entirely in your
-              browser. Your files stay on your device.
+              Merge, crop, organize, convert, inspect, and prepare label pages
+              on device. Files stay on device.
             </motion.p>
             <motion.div
               className="mt-8 flex flex-wrap justify-center gap-3"
@@ -193,13 +187,13 @@ export default function HomeRoute() {
                 prefetch="intent"
                 className={buttonVariants({ variant: 'default', size: 'lg' })}
               >
-                Get started
+                Get Started
               </Link>
               <a
                 href="#tools"
                 className={buttonVariants({ variant: 'outline', size: 'lg' })}
               >
-                Browse tools
+                Browse Tools
               </a>
             </motion.div>
           </motion.div>
@@ -222,8 +216,8 @@ export default function HomeRoute() {
               Everything runs locally
             </h2>
             <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              A focused set of PDF utilities that process files directly in the
-              browser. Nothing gets uploaded anywhere.
+              A focused set of PDF tools that process files on device. Files
+              are never sent to a server.
             </p>
           </motion.div>
 
@@ -295,14 +289,14 @@ export default function HomeRoute() {
         >
           <motion.div variants={staggerItem} className="mb-10">
             <p className="text-sm font-medium tracking-widest text-muted-foreground uppercase">
-              For E-commerce Sellers
+              For Sellers
             </p>
             <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-              Shipping label extractors
+              Shipping label tools
             </h2>
             <p className="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              Extract and prepare shipping labels from marketplace PDFs. Each
-              tool follows platform-specific page rules so labels are ready to
+              Prepare shipping label pages from marketplace PDFs. Each tool
+              follows platform-specific page rules so label pages are ready to
               print.
             </p>
           </motion.div>
@@ -365,7 +359,7 @@ export default function HomeRoute() {
             className="mt-3 max-w-lg text-base leading-relaxed text-muted-foreground"
           >
             InlinePDF is open source. Browse the code, open an issue, or
-            contribute — the entire project is on GitHub.
+            contribute. The entire project is on GitHub.
           </motion.p>
           <motion.div variants={staggerItem} className="mt-8">
             <a

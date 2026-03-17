@@ -138,29 +138,50 @@ export function calculateResolutionInfo(
   };
 }
 
-export async function convertPdfToImagesArchive(
-  { files }: { files: File[] },
-  options?: PdfToImagesRunOptions,
-): Promise<PdfToImagesResult> {
+interface ConvertPdfToImagesArchiveInput {
+  files: File[];
+  format: unknown;
+  maxDimensionCap: unknown;
+  pageNumbers?: number[];
+  onProgress?: (progress: RenderProgress) => void;
+}
+
+export async function convertPdfToImagesArchive({
+  files,
+  format,
+  maxDimensionCap,
+  pageNumbers,
+  onProgress,
+}: ConvertPdfToImagesArchiveInput): Promise<PdfToImagesResult> {
   const sourceFile = files.at(0);
   if (!sourceFile) {
     throw new Error('Select a PDF file before converting.');
   }
 
-  if (!isPdfToImagesRunOptions(options)) {
+  if (
+    !isPdfToImagesRunOptions({
+      format,
+      maxDimensionCap,
+      pageNumbers,
+      onProgress,
+    })
+  ) {
     throw new Error('Select an output format before converting.');
   }
 
+  const resolvedFormat = format as ImageOutputFormat;
+  const resolvedMaxDimensionCap = maxDimensionCap as MaxDimensionCap;
+
   const images = await renderPdfToImages({
     file: sourceFile,
-    format: options.format,
-    maxDimensionCap: options.maxDimensionCap,
-    pageNumbers: options.pageNumbers,
-    onProgress: options.onProgress,
+    format: resolvedFormat,
+    maxDimensionCap: resolvedMaxDimensionCap,
+    pageNumbers,
+    onProgress,
   });
 
   const archiveBlob = await zipImages({ images });
-  const archiveName = createImagesArchiveName(sourceFile.name, options.format);
+  const archiveName = createImagesArchiveName(sourceFile.name, resolvedFormat);
 
   return {
     blob: archiveBlob,

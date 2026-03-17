@@ -1,4 +1,6 @@
+import { lazy, Suspense } from 'react';
 import {
+  href,
   isRouteErrorResponse,
   Link,
   Links,
@@ -6,18 +8,28 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useFetchers,
+  useLocation,
+  useNavigation,
   useRouteLoaderData,
 } from 'react-router';
 
 import type { Route } from './+types/root';
 import rootStylesHref from './app.css?url';
 import { Shell } from './components/layout/shell';
-import { Toaster } from './components/ui/sonner';
+import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
+import { Spinner } from './components/ui/spinner';
 import {
   themeInitScript,
   themedIconPaths,
   readThemeStateFromCookieHeader,
 } from './lib/theme';
+
+const Toaster = lazy(() =>
+  import('./components/ui/sonner').then((module) => ({
+    default: module.Toaster,
+  })),
+);
 
 export function loader({ request }: Route.LoaderArgs) {
   return readThemeStateFromCookieHeader(request.headers.get('cookie'));
@@ -26,6 +38,12 @@ export function loader({ request }: Route.LoaderArgs) {
 export const links: Route.LinksFunction = () => [
   { rel: 'stylesheet', href: rootStylesHref },
 ];
+
+function isAnyFetcherPending(
+  fetchers: ReturnType<typeof useFetchers>,
+): boolean {
+  return fetchers.some((fetcher) => fetcher.state !== 'idle');
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const rootData = useRouteLoaderData<typeof loader>('root');
@@ -79,7 +97,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
-        <Toaster position="top-right" richColors />
+        <Suspense fallback={null}>
+          <Toaster position="top-right" richColors />
+        </Suspense>
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -88,11 +108,28 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
-}
+  const navigation = useNavigation();
+  const location = useLocation();
+  const fetchers = useFetchers();
+  const isPending =
+    navigation.state !== 'idle' || isAnyFetcherPending(fetchers);
+  const isPdfInfoRoute = /^\/info(\/|$)/.test(location.pathname);
+  const showGlobalPending = isPending && !isPdfInfoRoute;
 
-export function HydrateFallback() {
-  return <p className="p-4 text-sm text-muted-foreground">Loading app...</p>;
+  return (
+    <Shell>
+      {showGlobalPending ? (
+        <div aria-live="polite" className="min-h-14">
+          <Alert className="mb-6">
+            <Spinner className="h-4 w-4" />
+            <AlertTitle>Working</AlertTitle>
+            <AlertDescription>Processing the current action.</AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
+      <Outlet />
+    </Shell>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
@@ -125,13 +162,15 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         <p className="leading-7 text-muted-foreground">{details}</p>
         <div className="flex flex-wrap gap-3">
           <Link
-            to="/"
+            to={href('/')}
+            prefetch="intent"
             className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:brightness-95"
           >
             Go Home
           </Link>
           <Link
-            to="/merge"
+            to={href('/merge')}
+            prefetch="intent"
             className="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             Open Merge PDF

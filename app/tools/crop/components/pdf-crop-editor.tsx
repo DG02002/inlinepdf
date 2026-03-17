@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  startTransition,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from 'react';
 import ReactCrop, {
   centerCrop,
   makeAspectCrop,
@@ -119,8 +125,10 @@ export function PdfCropEditor({
 }: PdfCropEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(0);
+  const [containerSize, setContainerSize] = useState({
+    width: 0,
+    height: 0,
+  });
   const [pdfDocument, setPdfDocument] = useState<PdfDocumentProxyLike | null>(
     null,
   );
@@ -132,7 +140,10 @@ export function PdfCropEditor({
   const [pageDetails, setPageDetails] = useState<RenderedPageDetails | null>(
     null,
   );
-  const aspectRatio = useMemo(() => getAspectRatioForPreset(preset), [preset]);
+  const aspectRatio = getAspectRatioForPreset(preset);
+  const reportCropChange = useEffectEvent((nextCrop: PercentCrop | null) => {
+    onCropChange(nextCrop ? percentToNormalizedRect(nextCrop) : null);
+  });
 
   useEffect(() => {
     setCurrentCrop(cropRect ? normalizedToPercentRect(cropRect) : undefined);
@@ -147,14 +158,18 @@ export function PdfCropEditor({
     const resizeObserver = new ResizeObserver((entries) => {
       const nextWidth = entries[0]?.contentRect.width ?? 0;
       const nextHeight = entries[0]?.contentRect.height ?? 0;
-      setContainerWidth(nextWidth);
-      setContainerHeight(nextHeight);
+      startTransition(() => {
+        setContainerSize((currentSize) =>
+          currentSize.width === nextWidth && currentSize.height === nextHeight
+            ? currentSize
+            : { width: nextWidth, height: nextHeight },
+        );
+      });
     });
 
     resizeObserver.observe(element);
     const rect = element.getBoundingClientRect();
-    setContainerWidth(rect.width);
-    setContainerHeight(rect.height);
+    setContainerSize({ width: rect.width, height: rect.height });
 
     return () => {
       resizeObserver.disconnect();
@@ -171,10 +186,13 @@ export function PdfCropEditor({
 
     void (async () => {
       try {
-        const fileBytes = new Uint8Array(await sourceFile.arrayBuffer());
+        const [fileBuffer, pdfjs] = await Promise.all([
+          sourceFile.arrayBuffer(),
+          loadPdfJsModule(),
+        ]);
+        const fileBytes = new Uint8Array(fileBuffer);
         const copiedBytes = new Uint8Array(fileBytes.byteLength);
         copiedBytes.set(fileBytes);
-        const pdfjs = await loadPdfJsModule();
         const task = pdfjs.getDocument({ data: copiedBytes });
         loadingTask = task;
         loadedDocument = await task.promise;
@@ -224,12 +242,12 @@ export function PdfCropEditor({
         const canvasPadding = immersive ? 0 : 24;
         const maxPreviewWidth = Math.max(
           280,
-          Math.floor(containerWidth) - canvasPadding,
+          Math.floor(containerSize.width) - canvasPadding,
         );
         const maxPreviewHeight = Math.max(
           280,
           Math.floor(
-            (containerHeight || window.innerHeight * 0.72) - canvasPadding,
+            (containerSize.height || window.innerHeight * 0.72) - canvasPadding,
           ),
         );
         const scaleByWidth = maxPreviewWidth / baseViewport.width;
@@ -294,7 +312,7 @@ export function PdfCropEditor({
     return () => {
       cancellation.cancelled = true;
     };
-  }, [containerHeight, containerWidth, immersive, pageNumber, pdfDocument]);
+  }, [containerSize.height, containerSize.width, immersive, pageNumber, pdfDocument]);
 
   useEffect(() => {
     if (!aspectRatio || isRendering) {
@@ -347,8 +365,8 @@ export function PdfCropEditor({
     }
 
     setCurrentCrop(nextCrop);
-    onCropChange(percentToNormalizedRect(nextCrop));
-  }, [aspectRatio, currentCrop, isRendering, onCropChange, pageNumber]);
+    reportCropChange(nextCrop);
+  }, [aspectRatio, currentCrop, isRendering, pageNumber]);
 
   function handleCropChange(_pixelCrop: PixelCrop, percentCrop: PercentCrop) {
     setCurrentCrop(percentCrop);

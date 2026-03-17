@@ -1,7 +1,3 @@
-import { useState } from 'react';
-import { useFetcher } from 'react-router';
-
-import { PdfFileSelector } from '~/components/pdf-file-selector';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { Checkbox } from '~/components/ui/checkbox';
@@ -26,23 +22,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select';
-import { saveClientActionFallback } from '~/platform/files/client-action-fallback';
-import { getPageSizeOptionLabel } from '~/platform/pdf/page-size-options';
-import { readPdfDetails } from '~/platform/pdf/read-pdf-details';
-import type { ToolActionResult } from '~/shared/tool-ui/action-result';
-import { createFileEntryId } from '~/shared/tool-ui/create-file-entry-id';
-import {
-  FileQueueList,
-  type QueuedFile,
-} from '~/shared/tool-ui/file-queue-list';
-import { ToolWorkspace } from '~/shared/tool-ui/tool-workspace';
+import { SHIPPING_LABEL_PAGE_SIZE_IDS } from '~/platform/pdf/page-size-options';
+import { PageSizeSelectLabel } from '~/shared/tool-ui/page-size-option-label';
+import { SinglePdfToolWorkspace } from '~/shared/tool-ui/single-pdf-tool-workspace';
 import { useSuccessToast } from '~/shared/tool-ui/use-success-toast';
+import { useShippingLabelsWorkspace } from '~/tools/shipping-labels/use-shipping-labels-workspace';
 
 import type {
   ShippingLabelBrand,
-  ShippingLabelExtractionSummary,
   ShippingLabelOutputPageSize,
-  ShippingLabelSortDirection,
 } from './models';
 
 const BRAND_LABELS: Record<ShippingLabelBrand, string> = {
@@ -51,78 +39,40 @@ const BRAND_LABELS: Record<ShippingLabelBrand, string> = {
   flipkart: 'Flipkart',
 };
 
+const OUTPUT_PAGE_SIZE_DESCRIPTIONS: Record<ShippingLabelOutputPageSize, string> =
+  {
+    auto: 'Use the extracted label size automatically with no resizing.',
+    a3: 'Scale each extracted label to fit on a portrait A3 page.',
+    a4: 'Scale each extracted label to fit on a portrait A4 page.',
+    a5: 'Scale each extracted label to fit on a portrait A5 page.',
+    b5: 'Scale each extracted label to fit on a portrait B5 page.',
+    envelope10:
+      'Scale each extracted label to fit on an Envelope #10 page.',
+    envelopeChoukei3:
+      'Scale each extracted label to fit on an Envelope Choukei 3 page.',
+    envelopeDl: 'Scale each extracted label to fit on an Envelope DL page.',
+    jisB5: 'Scale each extracted label to fit on a JIS B5 page.',
+    roc16k: 'Scale each extracted label to fit on a ROC 16K page.',
+    superBA3: 'Scale each extracted label to fit on a Super B/A3 page.',
+    tabloid: 'Scale each extracted label to fit on a Tabloid page.',
+    tabloidOversize:
+      'Scale each extracted label to fit on a Tabloid Oversize page.',
+    legal: 'Scale each extracted label to fit on a US Legal page.',
+    letter: 'Scale each extracted label to fit on a US Letter page.',
+  };
+
 const OUTPUT_PAGE_SIZE_OPTIONS: {
   value: ShippingLabelOutputPageSize;
   description: string;
-}[] = [
-  {
-    value: 'auto',
-    description: 'Use the extracted label size automatically with no resizing.',
-  },
-  {
-    value: 'a3',
-    description: 'Scale each extracted label to fit on a portrait A3 page.',
-  },
-  {
-    value: 'a4',
-    description: 'Scale each extracted label to fit on a portrait A4 page.',
-  },
-  {
-    value: 'a5',
-    description: 'Scale each extracted label to fit on a portrait A5 page.',
-  },
-  {
-    value: 'b5',
-    description: 'Scale each extracted label to fit on a portrait B5 page.',
-  },
-  {
-    value: 'envelope10',
-    description: 'Scale each extracted label to fit on an Envelope #10 page.',
-  },
-  {
-    value: 'envelopeChoukei3',
-    description:
-      'Scale each extracted label to fit on an Envelope Choukei 3 page.',
-  },
-  {
-    value: 'envelopeDl',
-    description: 'Scale each extracted label to fit on an Envelope DL page.',
-  },
-  {
-    value: 'jisB5',
-    description: 'Scale each extracted label to fit on a JIS B5 page.',
-  },
-  {
-    value: 'roc16k',
-    description: 'Scale each extracted label to fit on a ROC 16K page.',
-  },
-  {
-    value: 'superBA3',
-    description: 'Scale each extracted label to fit on a Super B/A3 page.',
-  },
-  {
-    value: 'tabloid',
-    description: 'Scale each extracted label to fit on a Tabloid page.',
-  },
-  {
-    value: 'tabloidOversize',
-    description:
-      'Scale each extracted label to fit on a Tabloid Oversize page.',
-  },
-  {
-    value: 'legal',
-    description: 'Scale each extracted label to fit on a US Legal page.',
-  },
-  {
-    value: 'letter',
-    description: 'Scale each extracted label to fit on a US Letter page.',
-  },
-];
+}[] = SHIPPING_LABEL_PAGE_SIZE_IDS.map((value) => ({
+  value,
+  description: OUTPUT_PAGE_SIZE_DESCRIPTIONS[value],
+}));
 
 const outputPageSizeInputId = 'shipping-label-output-page-size';
 
 function renderOutputPageSizeLabel(value: ShippingLabelOutputPageSize) {
-  return getPageSizeOptionLabel(value);
+  return <PageSizeSelectLabel value={value} />;
 }
 
 interface ShippingLabelsToolScreenProps {
@@ -136,144 +86,25 @@ export function ShippingLabelsToolScreen({
   title,
   description,
 }: ShippingLabelsToolScreenProps) {
-  const fetcher =
-    useFetcher<ToolActionResult<ShippingLabelExtractionSummary>>();
-  const [selectedFileEntry, setSelectedFileEntry] = useState<QueuedFile | null>(
-    null,
-  );
-  const [outputPageSize, setOutputPageSize] =
-    useState<ShippingLabelOutputPageSize>('auto');
-  const [pickupPartnerDirection, setPickupPartnerDirection] =
-    useState<ShippingLabelSortDirection | null>(null);
-  const [skuDirection, setSkuDirection] =
-    useState<ShippingLabelSortDirection | null>(null);
-  const [localErrorMessage, setLocalErrorMessage] = useState<string | null>(
-    null,
-  );
-
-  const isExtracting = fetcher.state !== 'idle';
-  const actionErrorMessage =
-    fetcher.data && !fetcher.data.ok ? fetcher.data.message : null;
-  const errorMessage = localErrorMessage ?? actionErrorMessage;
-  const result =
-    selectedFileEntry && fetcher.data?.ok
-      ? (fetcher.data.result ?? null)
-      : null;
-  const isBrandAvailable = brand === 'meesho';
+  const workspace = useShippingLabelsWorkspace(brand);
   const selectedOutputPageSizeOption = OUTPUT_PAGE_SIZE_OPTIONS.find(
-    (option) => option.value === outputPageSize,
+    (option) => option.value === workspace.outputPageSize,
   );
 
-  useSuccessToast(fetcher.data?.ok ? fetcher.data.message : null);
-
-  function handleFileSelection(file: File) {
-    const entryId = createFileEntryId(file);
-
-    setSelectedFileEntry({
-      id: entryId,
-      file,
-      pageCount: null,
-      previewDataUrl: null,
-      previewStatus: 'loading',
-    });
-    setLocalErrorMessage(null);
-
-    void readPdfDetails(file)
-      .then((details) => {
-        setSelectedFileEntry((current) =>
-          current?.id === entryId
-            ? {
-                ...current,
-                pageCount: details.pageCount,
-                previewDataUrl: details.previewDataUrl,
-                previewStatus: details.previewDataUrl ? 'ready' : 'unavailable',
-              }
-            : current,
-        );
-      })
-      .catch(() => {
-        setSelectedFileEntry((current) =>
-          current?.id === entryId
-            ? {
-                ...current,
-                previewStatus: 'unavailable',
-              }
-            : current,
-        );
-      });
-  }
-
-  function handleClearSelection() {
-    if (isExtracting) {
-      return;
-    }
-
-    setSelectedFileEntry(null);
-    setLocalErrorMessage(null);
-  }
-
-  function handleExtract() {
-    if (!selectedFileEntry) {
-      setLocalErrorMessage('Select a PDF file before extracting labels.');
-      return;
-    }
-
-    if (!isBrandAvailable) {
-      setLocalErrorMessage(
-        `${BRAND_LABELS[brand]} extraction is not available yet.`,
-      );
-      return;
-    }
-
-    setLocalErrorMessage(null);
-    const submissionId = saveClientActionFallback({
-      file: selectedFileEntry.file,
-      outputPageSize,
-      pickupPartnerDirection,
-      skuDirection,
-    });
-    const formData = new FormData();
-    formData.set('file', selectedFileEntry.file);
-    formData.set('outputPageSize', outputPageSize);
-    if (pickupPartnerDirection) {
-      formData.set('pickupPartnerDirection', pickupPartnerDirection);
-    }
-    if (skuDirection) {
-      formData.set('skuDirection', skuDirection);
-    }
-    formData.set('submissionId', submissionId);
-    void fetcher.submit(formData, { method: 'post' });
-  }
+  useSuccessToast(workspace.successMessage);
 
   return (
-    <ToolWorkspace
+    <SinglePdfToolWorkspace
       title={title}
       description={description}
-      helperText={
-        isExtracting
-          ? 'Scanning pages, locating TAX INVOICE anchors, and preparing your extracted PDF...'
-          : undefined
-      }
-      inputPanel={
-        selectedFileEntry ? (
-          <FileQueueList
-            files={[selectedFileEntry]}
-            disabled={isExtracting}
-            showIndexBadge={false}
-            onRemove={handleClearSelection}
-          />
-        ) : (
-          <PdfFileSelector
-            ariaLabel="Select PDF file for shipping label extraction"
-            onSelect={(files) => {
-              handleFileSelection(files[0]);
-            }}
-            disabled={isExtracting}
-          />
-        )
-      }
+      selectorAriaLabel="Select PDF file for shipping label extraction"
+      selectedFileEntry={workspace.selectedFileEntry}
+      isBusy={workspace.isExtracting}
+      onSelectFile={workspace.handleFileSelection}
+      onClearSelection={workspace.handleClearSelection}
+      helperText={workspace.helperText}
       optionsPanel={
-        selectedFileEntry ? (
+        workspace.selectedFileEntry ? (
           <div className="space-y-6">
             <FieldSet className="max-w-sm">
               <div className="space-y-2">
@@ -281,17 +112,17 @@ export function ShippingLabelsToolScreen({
                   Output page size
                 </FieldLabel>
                 <Select
-                  value={outputPageSize}
+                  value={workspace.outputPageSize}
                   onValueChange={(value) => {
                     const nextPageSize = OUTPUT_PAGE_SIZE_OPTIONS.find(
                       (option) => option.value === value,
                     )?.value;
 
                     if (nextPageSize) {
-                      setOutputPageSize(nextPageSize);
+                      workspace.setOutputPageSize(nextPageSize);
                     }
                   }}
-                  disabled={isExtracting}
+                  disabled={workspace.isExtracting}
                 >
                   <SelectTrigger id={outputPageSizeInputId} className="w-full">
                     <SelectValue>
@@ -313,7 +144,7 @@ export function ShippingLabelsToolScreen({
                 <FieldDescription>
                   {
                     OUTPUT_PAGE_SIZE_OPTIONS.find(
-                      (option) => option.value === outputPageSize,
+                      (option) => option.value === workspace.outputPageSize,
                     )?.description
                   }
                 </FieldDescription>
@@ -329,11 +160,13 @@ export function ShippingLabelsToolScreen({
                   className="items-start rounded-xl border border-border px-4 py-3"
                 >
                   <Checkbox
-                    checked={pickupPartnerDirection !== null}
+                    checked={workspace.pickupPartnerDirection !== null}
                     onCheckedChange={(checked) => {
-                      setPickupPartnerDirection(checked ? 'desc' : null);
+                      workspace.setPickupPartnerDirection(
+                        checked ? 'desc' : null,
+                      );
                     }}
-                    disabled={isExtracting}
+                    disabled={workspace.isExtracting}
                     aria-label="Sort labels by pickup partner"
                   />
                   <FieldContent>
@@ -350,11 +183,11 @@ export function ShippingLabelsToolScreen({
                   className="items-start rounded-xl border border-border px-4 py-3"
                 >
                   <Checkbox
-                    checked={skuDirection !== null}
+                    checked={workspace.skuDirection !== null}
                     onCheckedChange={(checked) => {
-                      setSkuDirection(checked ? 'desc' : null);
+                      workspace.setSkuDirection(checked ? 'desc' : null);
                     }}
-                    disabled={isExtracting}
+                    disabled={workspace.isExtracting}
                     aria-label="Sort labels by SKU"
                   />
                   <FieldContent>
@@ -370,35 +203,35 @@ export function ShippingLabelsToolScreen({
         ) : null
       }
       actionBar={
-        selectedFileEntry ? (
+        workspace.selectedFileEntry ? (
           <div className="space-y-2">
             <Button
-              disabled={!isBrandAvailable || isExtracting}
-              onClick={handleExtract}
+              disabled={workspace.prepareButtonDisabled}
+              onClick={workspace.handleExtract}
             >
-              {isExtracting ? 'Extracting...' : 'Extract and Download'}
+              {workspace.prepareButtonLabel}
             </Button>
           </div>
         ) : null
       }
       outputPanel={
-        result ? (
+        workspace.resultSummary ? (
           <Card className="overflow-visible border border-border/70 bg-gradient-to-br from-card via-card to-muted/20">
             <CardHeader className="gap-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="space-y-1">
-                  <CardTitle>Extraction complete</CardTitle>
+                  <CardTitle>Label pages ready</CardTitle>
                   <CardDescription>
-                    Your label PDF has been generated and the download started.
+                    The prepared label PDF is ready to save.
                   </CardDescription>
                 </div>
                 <Badge variant="outline">
                   {BRAND_LABELS[brand]} ·{' '}
                   {OUTPUT_PAGE_SIZE_OPTIONS.find(
-                    (option) => option.value === outputPageSize,
+                    (option) => option.value === workspace.outputPageSize,
                   )?.value === 'auto'
                     ? 'Auto'
-                    : renderOutputPageSizeLabel(outputPageSize)}
+                    : renderOutputPageSizeLabel(workspace.outputPageSize)}
                 </Badge>
               </div>
             </CardHeader>
@@ -409,7 +242,7 @@ export function ShippingLabelsToolScreen({
                     Processed
                   </p>
                   <p className="mt-2 text-3xl font-semibold">
-                    {String(result.pagesProcessed)}
+                    {String(workspace.resultSummary.pagesProcessed)}
                   </p>
                 </div>
                 <div className="rounded-2xl bg-emerald-500/8 p-4 ring-1 ring-emerald-500/15">
@@ -417,7 +250,7 @@ export function ShippingLabelsToolScreen({
                     Extracted
                   </p>
                   <p className="mt-2 text-3xl font-semibold">
-                    {String(result.labelsExtracted)}
+                    {String(workspace.resultSummary.labelsExtracted)}
                   </p>
                 </div>
                 <div className="rounded-2xl bg-amber-500/8 p-4 ring-1 ring-amber-500/15">
@@ -425,7 +258,7 @@ export function ShippingLabelsToolScreen({
                     Skipped
                   </p>
                   <p className="mt-2 text-3xl font-semibold">
-                    {String(result.pagesSkipped)}
+                    {String(workspace.resultSummary.pagesSkipped)}
                   </p>
                 </div>
               </div>
@@ -434,14 +267,14 @@ export function ShippingLabelsToolScreen({
                   Output file
                 </p>
                 <p className="mt-2 break-all text-sm font-medium">
-                  {result.fileName}
+                  {workspace.resultSummary.fileName}
                 </p>
               </div>
             </CardContent>
           </Card>
         ) : null
       }
-      errorMessage={errorMessage}
+      errorMessage={workspace.errorMessage}
     />
   );
 }

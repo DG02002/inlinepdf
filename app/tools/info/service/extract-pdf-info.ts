@@ -302,16 +302,18 @@ export async function extractPdfInfo(file: File): Promise<PdfInfoResult> {
   await validatePdfFile(file);
 
   const bytes = await readFileBytes(file);
+  const pdfBytes = new Uint8Array(bytes);
 
   let document: PDFDocument;
+  let extracted: Awaited<ReturnType<typeof extractFontsAndRawMetadata>>;
   try {
-    document = await PDFDocument.load(bytes);
+    [document, extracted] = await Promise.all([
+      PDFDocument.load(bytes),
+      extractFontsAndRawMetadata(pdfBytes),
+    ]);
   } catch {
     throw new Error('Unable to parse this PDF file.');
   }
-
-  const pdfBytes = new Uint8Array(bytes);
-  const extracted = await extractFontsAndRawMetadata(pdfBytes);
 
   return {
     core: {

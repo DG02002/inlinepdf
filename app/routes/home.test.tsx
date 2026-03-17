@@ -12,20 +12,28 @@ function renderWithRoot(
 ) {
   document.documentElement.setAttribute('data-theme-preference', resolvedTheme);
   document.documentElement.setAttribute('data-resolved-theme', resolvedTheme);
+  const loaderData = {
+    preference: resolvedTheme,
+    resolvedTheme,
+  };
 
   const router = createMemoryRouter(
     [
       {
         id: 'root',
         path: '/',
-        loader: () => ({
-          preference: resolvedTheme,
-          resolvedTheme,
-        }),
+        loader: () => loaderData,
         element,
       },
     ],
-    { initialEntries: ['/'] },
+    {
+      hydrationData: {
+        loaderData: {
+          root: loaderData,
+        },
+      },
+      initialEntries: ['/'],
+    },
   );
 
   return render(<RouterProvider router={router} />);

@@ -1,12 +1,10 @@
-import {
-  CropIcon,
-  File01Icon,
-  GitMergeIcon,
-  ImageDownloadIcon,
-  ImageUploadIcon,
-  InformationCircleIcon,
-  ArrangeIcon,
-} from '@hugeicons/core-free-icons';
+import ArrangeIcon from '@hugeicons/core-free-icons/ArrangeIcon';
+import CropIcon from '@hugeicons/core-free-icons/CropIcon';
+import File01Icon from '@hugeicons/core-free-icons/File01Icon';
+import GitMergeIcon from '@hugeicons/core-free-icons/GitMergeIcon';
+import ImageDownloadIcon from '@hugeicons/core-free-icons/ImageDownloadIcon';
+import ImageUploadIcon from '@hugeicons/core-free-icons/ImageUploadIcon';
+import InformationCircleIcon from '@hugeicons/core-free-icons/InformationCircleIcon';
 
 import { cropToolDefinition } from '~/tools/crop/definition';
 import { imageToPdfToolDefinition } from '~/tools/image-to-pdf/definition';

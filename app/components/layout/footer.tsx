@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import { href, Link } from 'react-router';
 
 import { containerClassName } from './container';
 
@@ -11,14 +11,16 @@ export function Footer() {
         <p>Copyright © 2026 InlinePDF. All rights reserved.</p>
         <p className="flex items-center gap-2">
           <Link
-            to="/privacy"
+            to={href('/privacy')}
+            prefetch="intent"
             className="text-muted-foreground hover:text-foreground"
           >
             Privacy Policy
           </Link>
           <span aria-hidden="true">|</span>
           <Link
-            to="/terms"
+            to={href('/terms')}
+            prefetch="intent"
             className="text-muted-foreground hover:text-foreground"
           >
             Terms of Use

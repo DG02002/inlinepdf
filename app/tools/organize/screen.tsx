@@ -1,8 +1,11 @@
-import { type ReactNode, useEffect, useReducer, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useState,
+} from 'react';
 import { DragOverlay } from '@dnd-kit/react';
 import { useSortable } from '@dnd-kit/react/sortable';
-import { useFetcher } from 'react-router';
-import { Cancel01Icon, Rotate02Icon } from '@hugeicons/core-free-icons';
+import Cancel01Icon from '@hugeicons/core-free-icons/Cancel01Icon';
+import Rotate02Icon from '@hugeicons/core-free-icons/Rotate02Icon';
 import { HugeiconsIcon } from '@hugeicons/react';
 
 import { CspDragDropProvider } from '~/components/dnd/csp-drag-drop-provider';
@@ -15,7 +18,6 @@ import {
   FileQueueList,
   type QueuedFile,
 } from '~/shared/tool-ui/file-queue-list';
-import { readPdfDetails } from '~/platform/pdf/read-pdf-details';
 import {
   Pagination,
   PaginationContent,
@@ -32,71 +34,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '~/components/ui/tooltip';
-import { saveClientActionFallback } from '~/platform/files/client-action-fallback';
-import { readOrganizePreview } from '~/tools/organize/service/read-organize-preview';
-import type {
-  OrganizePageState,
-  OrganizePreviewSession,
-} from '~/tools/organize/models';
-import {
-  normalizeQuarterTurns,
-  quarterTurnsToDegrees,
-} from '~/tools/organize/models';
-import type { ToolActionResult } from '~/shared/tool-ui/action-result';
-import { reorderListByIndex } from '~/shared/tool-ui/reorder-list-by-index';
+import type { OrganizePageState } from '~/tools/organize/models';
+import { quarterTurnsToDegrees } from '~/tools/organize/models';
 import { ToolWorkspace } from '~/shared/tool-ui/tool-workspace';
 import { useSuccessToast } from '~/shared/tool-ui/use-success-toast';
+import { buildOrganizePaginationItems } from '~/tools/organize/workspace-state';
+import { useOrganizeWorkspace } from '~/tools/organize/use-organize-workspace';
 import { cn } from '~/lib/utils';
-
-const PAGES_PER_VIEW = 12;
 const OVERLAY_ICON_BUTTON_CLASS =
   'rounded-full border-border bg-white text-foreground shadow-sm hover:bg-white active:bg-white';
 const PAGE_CARD_CLASS_NAME =
   'rounded-2xl select-none transition-shadow touch-none';
-
-type PaginationToken = number | 'ellipsis';
-
-interface OrganizeWorkspaceState {
-  selectedFile: File | null;
-  selectedFileEntry: QueuedFile | null;
-  previewSession: OrganizePreviewSession | null;
-  pageStates: OrganizePageState[];
-  currentPaginationPage: number;
-  isReadingPdf: boolean;
-  localErrorMessage: string | null;
-}
-
-type OrganizeWorkspaceAction =
-  | { type: 'fileSelectionStarted'; file: File; entryId: string }
-  | {
-      type: 'fileDetailsLoaded';
-      entryId: string;
-      pageCount: number;
-      previewDataUrl: string | null;
-    }
-  | { type: 'fileDetailsFailed'; entryId: string }
-  | {
-      type: 'previewSessionLoaded';
-      entryId: string;
-      previewSession: OrganizePreviewSession;
-    }
-  | { type: 'previewSessionFailed'; message: string }
-  | { type: 'replaceFile' }
-  | { type: 'localErrorCleared' }
-  | { type: 'paginationClamped'; totalPaginationPages: number }
-  | { type: 'paginationPageSet'; page: number }
-  | { type: 'paginationOffset'; offset: number; totalPaginationPages: number }
-  | { type: 'pageSelectionToggled'; pageId: string }
-  | { type: 'pageRotated'; pageId: string }
-  | { type: 'pageRemoved'; pageId: string }
-  | { type: 'pagesReordered'; sourceId: string; targetId: string }
-  | { type: 'pagesMarkedLoading'; pageIds: string[] }
-  | {
-      type: 'pageThumbnailLoaded';
-      pageId: string;
-      thumbnailDataUrl: string | null;
-    }
-  | { type: 'pageThumbnailUnavailable'; pageId: string };
 
 interface SortableOrganizePageCardProps {
   page: OrganizePageState;
@@ -108,301 +56,6 @@ interface SortableOrganizePageCardProps {
   onToggleSelected: (pageId: string) => void;
   onRotate: (pageId: string) => void;
   onRemove: (pageId: string) => void;
-}
-
-const initialState: OrganizeWorkspaceState = {
-  selectedFile: null,
-  selectedFileEntry: null,
-  previewSession: null,
-  pageStates: [],
-  currentPaginationPage: 1,
-  isReadingPdf: false,
-  localErrorMessage: null,
-};
-
-function reorderPagesById(
-  pages: OrganizePageState[],
-  sourceId: string,
-  targetId: string,
-): OrganizePageState[] {
-  const sourceIndex = pages.findIndex((page) => page.id === sourceId);
-  const targetIndex = pages.findIndex((page) => page.id === targetId);
-
-  if (sourceIndex === -1 || targetIndex === -1) {
-    return pages;
-  }
-
-  return reorderListByIndex(pages, sourceIndex, targetIndex);
-}
-
-function buildPaginationItems(
-  totalPages: number,
-  currentPage: number,
-): PaginationToken[] {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1);
-  }
-
-  const pages = new Set<number>([
-    1,
-    totalPages,
-    currentPage - 1,
-    currentPage,
-    currentPage + 1,
-  ]);
-
-  if (currentPage <= 3) {
-    pages.add(2);
-    pages.add(3);
-  }
-
-  if (currentPage >= totalPages - 2) {
-    pages.add(totalPages - 1);
-    pages.add(totalPages - 2);
-  }
-
-  const sortedPages = [...pages]
-    .filter((page) => page >= 1 && page <= totalPages)
-    .sort((a, b) => a - b);
-
-  const items: PaginationToken[] = [];
-
-  for (const [index, page] of sortedPages.entries()) {
-    const previous = sortedPages[index - 1];
-    if (previous && page - previous > 1) {
-      items.push('ellipsis');
-    }
-
-    items.push(page);
-  }
-
-  return items;
-}
-
-function getVisiblePageRangeLabel(
-  currentPage: number,
-  pageSize: number,
-  totalPages: number,
-): string {
-  if (totalPages < 1) {
-    return 'No pages available';
-  }
-
-  const start = (currentPage - 1) * pageSize + 1;
-  const end = Math.min(start + pageSize - 1, totalPages);
-  return `Showing pages ${String(start)}-${String(end)} of ${String(totalPages)}`;
-}
-
-function createOrganizePageStates(pageCount: number): OrganizePageState[] {
-  return Array.from({ length: pageCount }, (_, index) => ({
-    id: `page-${String(index + 1)}`,
-    sourcePageNumber: index + 1,
-    rotationQuarterTurns: 0,
-    isDeleted: false,
-    thumbnailDataUrl: null,
-    thumbnailStatus: 'idle' as const,
-  }));
-}
-
-function organizeWorkspaceReducer(
-  state: OrganizeWorkspaceState,
-  action: OrganizeWorkspaceAction,
-): OrganizeWorkspaceState {
-  switch (action.type) {
-    case 'fileSelectionStarted':
-      return {
-        ...state,
-        selectedFile: action.file,
-        selectedFileEntry: {
-          id: action.entryId,
-          file: action.file,
-          pageCount: null,
-          previewDataUrl: null,
-          previewStatus: 'loading',
-        },
-        previewSession: null,
-        pageStates: [],
-        currentPaginationPage: 1,
-        isReadingPdf: true,
-        localErrorMessage: null,
-      };
-    case 'fileDetailsLoaded':
-      return {
-        ...state,
-        selectedFileEntry:
-          state.selectedFileEntry?.id === action.entryId
-            ? {
-                ...state.selectedFileEntry,
-                pageCount: action.pageCount,
-                previewDataUrl: action.previewDataUrl,
-                previewStatus: action.previewDataUrl ? 'ready' : 'unavailable',
-              }
-            : state.selectedFileEntry,
-      };
-    case 'fileDetailsFailed':
-      return {
-        ...state,
-        selectedFileEntry:
-          state.selectedFileEntry?.id === action.entryId
-            ? {
-                ...state.selectedFileEntry,
-                previewStatus: 'unavailable',
-              }
-            : state.selectedFileEntry,
-      };
-    case 'previewSessionLoaded':
-      return {
-        ...state,
-        previewSession: action.previewSession,
-        selectedFileEntry:
-          state.selectedFileEntry?.id === action.entryId
-            ? {
-                ...state.selectedFileEntry,
-                pageCount: action.previewSession.pageCount,
-              }
-            : state.selectedFileEntry,
-        pageStates: createOrganizePageStates(action.previewSession.pageCount),
-        currentPaginationPage: 1,
-        isReadingPdf: false,
-      };
-    case 'previewSessionFailed':
-      return {
-        ...initialState,
-        localErrorMessage: action.message,
-      };
-    case 'replaceFile':
-      return {
-        ...initialState,
-      };
-    case 'localErrorCleared':
-      return {
-        ...state,
-        localErrorMessage: null,
-      };
-    case 'paginationClamped':
-      return {
-        ...state,
-        currentPaginationPage: Math.min(
-          state.currentPaginationPage,
-          Math.max(1, action.totalPaginationPages),
-        ),
-      };
-    case 'paginationPageSet':
-      return {
-        ...state,
-        currentPaginationPage: action.page,
-      };
-    case 'paginationOffset': {
-      const nextPage = Math.min(
-        Math.max(state.currentPaginationPage + action.offset, 1),
-        action.totalPaginationPages,
-      );
-
-      return {
-        ...state,
-        currentPaginationPage: nextPage,
-      };
-    }
-    case 'pageSelectionToggled':
-      return {
-        ...state,
-        localErrorMessage: null,
-        pageStates: state.pageStates.map((page) =>
-          page.id === action.pageId
-            ? {
-                ...page,
-                isDeleted: !page.isDeleted,
-              }
-            : page,
-        ),
-      };
-    case 'pageRotated':
-      return {
-        ...state,
-        localErrorMessage: null,
-        pageStates: state.pageStates.map((page) =>
-          page.id === action.pageId
-            ? {
-                ...page,
-                rotationQuarterTurns: normalizeQuarterTurns(
-                  page.rotationQuarterTurns + 1,
-                ),
-              }
-            : page,
-        ),
-      };
-    case 'pageRemoved':
-      return {
-        ...state,
-        localErrorMessage: null,
-        pageStates: state.pageStates.map((page) =>
-          page.id === action.pageId
-            ? {
-                ...page,
-                isDeleted: true,
-              }
-            : page,
-        ),
-      };
-    case 'pagesReordered':
-      return {
-        ...state,
-        localErrorMessage: null,
-        pageStates: reorderPagesById(
-          state.pageStates,
-          action.sourceId,
-          action.targetId,
-        ),
-      };
-    case 'pagesMarkedLoading': {
-      const targetIds = new Set(action.pageIds);
-      if (targetIds.size < 1) {
-        return state;
-      }
-
-      return {
-        ...state,
-        pageStates: state.pageStates.map((page) =>
-          targetIds.has(page.id)
-            ? {
-                ...page,
-                thumbnailStatus: 'loading',
-              }
-            : page,
-        ),
-      };
-    }
-    case 'pageThumbnailLoaded':
-      return {
-        ...state,
-        pageStates: state.pageStates.map((page) =>
-          page.id === action.pageId
-            ? {
-                ...page,
-                thumbnailStatus: action.thumbnailDataUrl
-                  ? 'ready'
-                  : 'unavailable',
-                thumbnailDataUrl: action.thumbnailDataUrl,
-              }
-            : page,
-        ),
-      };
-    case 'pageThumbnailUnavailable':
-      return {
-        ...state,
-        pageStates: state.pageStates.map((page) =>
-          page.id === action.pageId
-            ? {
-                ...page,
-                thumbnailStatus: 'unavailable',
-                thumbnailDataUrl: null,
-              }
-            : page,
-        ),
-      };
-    default:
-      return state;
-  }
 }
 
 function getProjectedTargetId(
@@ -586,7 +239,7 @@ function OrganizePageCardContent({
           {page.isDeleted ? (
             <div className="absolute inset-0 z-10 flex items-end justify-center bg-background/40 pb-3">
               <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium">
-                Excluded from download
+                Excluded from export
               </span>
             </div>
           ) : null}
@@ -705,7 +358,7 @@ function OrganizePaginationControls({
     return null;
   }
 
-  const paginationItems = buildPaginationItems(
+  const paginationItems = buildOrganizePaginationItems(
     totalPaginationPages,
     currentPaginationPage,
   );
@@ -855,23 +508,6 @@ function OrganizePageGrid({
   );
 }
 
-function buildFileInfoEntry(
-  selectedFile: File,
-  selectedFileEntry: QueuedFile | null,
-  pageStates: OrganizePageState[],
-  isReadingPdf: boolean,
-): QueuedFile {
-  return (
-    selectedFileEntry ?? {
-      id: 'organize-file-fallback',
-      file: selectedFile,
-      pageCount: pageStates.length > 0 ? pageStates.length : null,
-      previewDataUrl: null,
-      previewStatus: isReadingPdf ? 'loading' : 'unavailable',
-    }
-  );
-}
-
 function OrganizeFileInfoPanel({
   fileInfoEntry,
   disabled,
@@ -904,7 +540,7 @@ function OrganizeSelectionState({
   return (
     <ToolWorkspace
       title="Organize PDF"
-      description="Reorder, rotate, and remove pages before downloading a new PDF."
+      description="Reorder, rotate, and remove pages, then export a new PDF."
       inputPanel={
         <PdfFileSelector
           ariaLabel="Select PDF file for organizing"
@@ -988,7 +624,7 @@ function OrganizeReadyState({
   return (
     <ToolWorkspace
       title="Organize PDF"
-      description="Reorder pages with drag and drop, then download the updated PDF."
+      description="Reorder pages and export the updated PDF."
       inputPanel={fileInfoPanel}
       outputPanel={
         <section className="space-y-4">
@@ -1020,7 +656,7 @@ function OrganizeReadyState({
 
           <div className="flex justify-end pt-1">
             <Button disabled={!canExport} onClick={onExport}>
-              {isExporting ? 'Organizing...' : 'Organize and Download'}
+              {isExporting ? 'Organizing...' : 'Export PDF'}
             </Button>
           </div>
         </section>
@@ -1031,293 +667,80 @@ function OrganizeReadyState({
 }
 
 export function OrganizeToolScreen() {
-  const fetcher = useFetcher<ToolActionResult>();
-  const selectionTokenRef = useRef(0);
-  const [state, dispatch] = useReducer(organizeWorkspaceReducer, initialState);
-  const isExporting = fetcher.state !== 'idle';
+  const workspace = useOrganizeWorkspace();
 
-  const selectedPageCount = state.pageStates.filter(
-    (page) => !page.isDeleted,
-  ).length;
-  const excludedPageCount = state.pageStates.length - selectedPageCount;
-  const totalPaginationPages = Math.max(
-    1,
-    Math.ceil(state.pageStates.length / PAGES_PER_VIEW),
-  );
-  const startIndex = (state.currentPaginationPage - 1) * PAGES_PER_VIEW;
-  const visiblePages = state.pageStates.slice(
-    startIndex,
-    startIndex + PAGES_PER_VIEW,
-  );
-  const canExport =
-    !!state.selectedFile &&
-    selectedPageCount > 0 &&
-    state.pageStates.length > 0 &&
-    !isExporting &&
-    !state.isReadingPdf;
-  const actionErrorMessage =
-    fetcher.data && !fetcher.data.ok ? fetcher.data.message : null;
-  const errorMessage = state.localErrorMessage ?? actionErrorMessage;
-  const successMessage = fetcher.data?.ok ? fetcher.data.message : null;
+  useSuccessToast(workspace.successMessage);
 
-  useSuccessToast(successMessage);
-
-  useEffect(() => {
-    return () => {
-      if (state.previewSession) {
-        void state.previewSession.destroy();
-      }
-    };
-  }, [state.previewSession]);
-
-  useEffect(() => {
-    dispatch({ type: 'paginationClamped', totalPaginationPages });
-  }, [totalPaginationPages]);
-
-  useEffect(() => {
-    if (!state.previewSession || state.pageStates.length < 1) {
-      return;
-    }
-
-    const targetPageNumbers = new Set<number>();
-
-    for (const pageOffset of [-1, 0, 1]) {
-      const paginationPage = state.currentPaginationPage + pageOffset;
-      if (paginationPage < 1 || paginationPage > totalPaginationPages) {
-        continue;
-      }
-
-      const rangeStart = (paginationPage - 1) * PAGES_PER_VIEW;
-      const rangeEnd = rangeStart + PAGES_PER_VIEW;
-      const pagesInRange = state.pageStates.slice(rangeStart, rangeEnd);
-
-      for (const page of pagesInRange) {
-        targetPageNumbers.add(page.sourcePageNumber);
-      }
-    }
-
-    const pagesToLoad = state.pageStates.filter(
-      (page) =>
-        targetPageNumbers.has(page.sourcePageNumber) &&
-        page.thumbnailStatus === 'idle',
-    );
-
-    if (pagesToLoad.length < 1) {
-      return;
-    }
-
-    const activeSelectionToken = selectionTokenRef.current;
-    dispatch({
-      type: 'pagesMarkedLoading',
-      pageIds: pagesToLoad.map((page) => page.id),
-    });
-
-    for (const page of pagesToLoad) {
-      void state.previewSession
-        .getPageThumbnail(page.sourcePageNumber)
-        .then((thumbnailDataUrl) => {
-          if (selectionTokenRef.current !== activeSelectionToken) {
-            return;
-          }
-
-          dispatch({
-            type: 'pageThumbnailLoaded',
-            pageId: page.id,
-            thumbnailDataUrl,
-          });
-        })
-        .catch(() => {
-          if (selectionTokenRef.current !== activeSelectionToken) {
-            return;
-          }
-
-          dispatch({ type: 'pageThumbnailUnavailable', pageId: page.id });
-        });
-    }
-  }, [
-    state.currentPaginationPage,
-    state.pageStates,
-    state.previewSession,
-    totalPaginationPages,
-  ]);
-
-  async function handleFileSelected(file: File) {
-    const selectionToken = selectionTokenRef.current + 1;
-    const entryId = `organize-file-${String(selectionToken)}`;
-    selectionTokenRef.current = selectionToken;
-
-    dispatch({ type: 'fileSelectionStarted', file, entryId });
-
-    void readPdfDetails(file)
-      .then((details) => {
-        if (selectionTokenRef.current !== selectionToken) {
-          return;
-        }
-
-        if (details.pageCount === null) {
-          dispatch({ type: 'fileDetailsFailed', entryId });
-          return;
-        }
-
-        dispatch({
-          type: 'fileDetailsLoaded',
-          entryId,
-          pageCount: details.pageCount,
-          previewDataUrl: details.previewDataUrl,
-        });
-      })
-      .catch(() => {
-        if (selectionTokenRef.current !== selectionToken) {
-          return;
-        }
-
-        dispatch({ type: 'fileDetailsFailed', entryId });
-      });
-
-    try {
-      const nextPreviewSession = await readOrganizePreview(file);
-
-      if (selectionTokenRef.current !== selectionToken) {
-        await nextPreviewSession.destroy();
-        return;
-      }
-
-      if (nextPreviewSession.pageCount < 1) {
-        await nextPreviewSession.destroy();
-        throw new Error('This PDF has no pages to organize.');
-      }
-
-      dispatch({
-        type: 'previewSessionLoaded',
-        entryId,
-        previewSession: nextPreviewSession,
-      });
-    } catch (error: unknown) {
-      if (selectionTokenRef.current !== selectionToken) {
-        return;
-      }
-
-      const fallback = 'Failed to read PDF pages.';
-      dispatch({
-        type: 'previewSessionFailed',
-        message: error instanceof Error ? error.message : fallback,
-      });
-    }
-  }
-
-  function handleReplaceFile() {
-    if (state.isReadingPdf || isExporting) {
-      return;
-    }
-
-    selectionTokenRef.current += 1;
-    dispatch({ type: 'replaceFile' });
-  }
-
-  function handleExport() {
-    if (!state.selectedFile) {
-      return;
-    }
-
-    dispatch({ type: 'localErrorCleared' });
-
-    const submissionId = saveClientActionFallback({
-      file: state.selectedFile,
-      pages: state.pageStates,
-    });
-    const formData = new FormData();
-    formData.set('file', state.selectedFile);
-    formData.set('pages', JSON.stringify(state.pageStates));
-    formData.set('submissionId', submissionId);
-    void fetcher.submit(formData, { method: 'post' });
-  }
-
-  if (!state.selectedFile) {
+  if (!workspace.selectedFile) {
     return (
       <OrganizeSelectionState
-        disabled={state.isReadingPdf || isExporting}
-        errorMessage={errorMessage}
-        onSelectFile={handleFileSelected}
+        disabled={workspace.isReadingPdf || workspace.isExporting}
+        errorMessage={workspace.errorMessage}
+        onSelectFile={workspace.handleFileSelected}
       />
     );
   }
 
-  const fileInfoEntry = buildFileInfoEntry(
-    state.selectedFile,
-    state.selectedFileEntry,
-    state.pageStates,
-    state.isReadingPdf,
-  );
+  if (!workspace.fileInfoEntry) {
+    return null;
+  }
+
   const fileInfoPanel = (
     <OrganizeFileInfoPanel
-      fileInfoEntry={fileInfoEntry}
-      disabled={state.isReadingPdf || isExporting}
-      onRemove={handleReplaceFile}
+      fileInfoEntry={workspace.fileInfoEntry}
+      disabled={workspace.isReadingPdf || workspace.isExporting}
+      onRemove={() => {
+        workspace.handleReplaceFile();
+      }}
     />
   );
 
-  if (
-    state.isReadingPdf ||
-    !state.previewSession ||
-    state.pageStates.length < 1
-  ) {
+  if (workspace.isLoadingPreview) {
     return (
       <OrganizeLoadingState
         fileInfoPanel={fileInfoPanel}
-        errorMessage={errorMessage}
+        errorMessage={workspace.errorMessage}
       />
     );
   }
-
-  const visibleRangeLabel = getVisiblePageRangeLabel(
-    state.currentPaginationPage,
-    PAGES_PER_VIEW,
-    state.pageStates.length,
-  );
 
   return (
     <OrganizeReadyState
       fileInfoPanel={fileInfoPanel}
-      selectedPageCount={selectedPageCount}
-      excludedPageCount={excludedPageCount}
-      visibleRangeLabel={visibleRangeLabel}
-      currentPaginationPage={state.currentPaginationPage}
-      totalPaginationPages={totalPaginationPages}
-      visiblePages={visiblePages}
-      startIndex={startIndex}
-      isExporting={isExporting}
-      canExport={canExport}
-      errorMessage={errorMessage}
+      selectedPageCount={workspace.selectedPageCount}
+      excludedPageCount={workspace.excludedPageCount}
+      visibleRangeLabel={workspace.visibleRangeLabel}
+      currentPaginationPage={workspace.currentPaginationPage}
+      totalPaginationPages={workspace.totalPaginationPages}
+      visiblePages={workspace.visiblePages}
+      startIndex={workspace.startIndex}
+      isExporting={workspace.isExporting}
+      canExport={workspace.canExport}
+      errorMessage={workspace.errorMessage}
       onGoToPage={(page) => {
-        dispatch({ type: 'paginationPageSet', page });
+        workspace.goToPage(page);
       }}
       onPreviousPage={() => {
-        dispatch({
-          type: 'paginationOffset',
-          offset: -1,
-          totalPaginationPages,
-        });
+        workspace.goToPreviousPage();
       }}
       onNextPage={() => {
-        dispatch({
-          type: 'paginationOffset',
-          offset: 1,
-          totalPaginationPages,
-        });
+        workspace.goToNextPage();
       }}
       onDragReorder={(sourceId, targetId) => {
-        dispatch({ type: 'pagesReordered', sourceId, targetId });
+        workspace.reorderPages(sourceId, targetId);
       }}
       onToggleSelected={(pageId) => {
-        dispatch({ type: 'pageSelectionToggled', pageId });
+        workspace.togglePageSelected(pageId);
       }}
       onRotate={(pageId) => {
-        dispatch({ type: 'pageRotated', pageId });
+        workspace.rotatePage(pageId);
       }}
       onRemove={(pageId) => {
-        dispatch({ type: 'pageRemoved', pageId });
+        workspace.removePage(pageId);
       }}
-      onExport={handleExport}
+      onExport={() => {
+        workspace.handleExport();
+      }}
     />
   );
 }

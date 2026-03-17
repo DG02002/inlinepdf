@@ -42,11 +42,13 @@ async function withPdfDocument<T>(
   callback: (pdfDocument: PdfJsDocument) => Promise<T>,
 ): Promise<T> {
   await validatePdfFile(file);
-  const sourceBytes = new Uint8Array(await file.arrayBuffer());
+  const [sourceBuffer, pdfjs] = await Promise.all([
+    file.arrayBuffer(),
+    loadPdfJsModule(),
+  ]);
+  const sourceBytes = new Uint8Array(sourceBuffer);
   const bytes = new Uint8Array(sourceBytes.byteLength);
   bytes.set(sourceBytes);
-
-  const pdfjs = await loadPdfJsModule();
   const loadingTask = pdfjs.getDocument({ data: bytes });
   const pdfDocument = await loadingTask.promise;
 

@@ -94,7 +94,12 @@ export default defineConfig([
   },
   {
     name: 'ts/routes',
-    files: ['app/routes/**/*.tsx', 'app/tools/**/route.tsx', 'app/root.tsx'],
+    files: [
+      'app/routes/**/*.tsx',
+      'app/tools/**/route.tsx',
+      'app/tools/**/routes/**/*.tsx',
+      'app/root.tsx',
+    ],
     rules: {
       // React Router loaders and actions legitimately throw `Response`.
       '@typescript-eslint/only-throw-error': 'off',

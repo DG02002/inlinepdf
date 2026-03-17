@@ -1,6 +1,6 @@
-import { Menu01Icon } from '@hugeicons/core-free-icons';
+import Menu01Icon from '@hugeicons/core-free-icons/Menu01Icon';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Link } from 'react-router';
+import { href, Link } from 'react-router';
 
 import {
   getToolsForNavigationGroup,
@@ -35,8 +35,9 @@ function ToolMenuLink({
 }) {
   return (
     <NavigationMenuLink
-      href={path}
+      render={<Link to={path} prefetch="intent" />}
       className="block min-w-64 space-y-1 rounded-2xl"
+      closeOnClick
     >
       <p className="font-medium text-foreground">{title}</p>
       <p className="text-sm leading-6 text-muted-foreground">{description}</p>
@@ -92,7 +93,7 @@ function MobileToolNavigation() {
         <SheetHeader className="border-b border-border">
           <SheetTitle>InlinePDF</SheetTitle>
           <SheetDescription>
-            Local-first PDF tools with no uploads.
+            Local-first PDF tools that process files on device.
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-1 flex-col gap-8 overflow-y-auto px-6 py-6">
@@ -106,6 +107,7 @@ function MobileToolNavigation() {
                   <Link
                     key={tool.id}
                     to={tool.path}
+                    prefetch="intent"
                     className="block rounded-2xl border border-border bg-card px-4 py-3 transition-colors hover:bg-muted/40"
                   >
                     <p className="font-medium text-foreground">{tool.title}</p>
@@ -124,13 +126,15 @@ function MobileToolNavigation() {
             </h2>
             <div className="space-y-2">
               <Link
-                to="/privacy"
+                to={href('/privacy')}
+                prefetch="intent"
                 className="block rounded-2xl border border-border bg-card px-4 py-3 transition-colors hover:bg-muted/40"
               >
                 Privacy
               </Link>
               <Link
-                to="/terms"
+                to={href('/terms')}
+                prefetch="intent"
                 className="block rounded-2xl border border-border bg-card px-4 py-3 transition-colors hover:bg-muted/40"
               >
                 Terms

@@ -1,13 +1,11 @@
 import * as React from 'react';
-import { Toaster as Sonner, type ToasterProps } from 'sonner';
+import Alert02Icon from '@hugeicons/core-free-icons/Alert02Icon';
+import CheckmarkCircle02Icon from '@hugeicons/core-free-icons/CheckmarkCircle02Icon';
+import InformationCircleIcon from '@hugeicons/core-free-icons/InformationCircleIcon';
+import Loading03Icon from '@hugeicons/core-free-icons/Loading03Icon';
+import MultiplicationSignCircleIcon from '@hugeicons/core-free-icons/MultiplicationSignCircleIcon';
 import { HugeiconsIcon } from '@hugeicons/react';
-import {
-  CheckmarkCircle02Icon,
-  InformationCircleIcon,
-  Alert02Icon,
-  MultiplicationSignCircleIcon,
-  Loading03Icon,
-} from '@hugeicons/core-free-icons';
+import { Toaster as Sonner, type ToasterProps } from 'sonner';
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const [theme, setTheme] = React.useState<ToasterProps['theme']>('system');

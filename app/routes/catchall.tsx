@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import { data, href, Link } from 'react-router';
 
 import type { Route } from './+types/catchall';
 import { buttonVariants } from '~/components/ui/button-variants';
@@ -13,6 +13,10 @@ export const meta: Route.MetaFunction = () => {
   ];
 };
 
+export function loader() {
+  return data(null, { status: 404 });
+}
+
 export default function CatchallRoute() {
   return (
     <section className="w-full space-y-4 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-sm">
@@ -21,14 +25,19 @@ export default function CatchallRoute() {
         Page not found
       </h1>
       <p className="leading-7 text-muted-foreground">
-        The URL does not exist. Go back to home or launch a tool.
+        The page does not exist. Go home or open a tool.
       </p>
       <div className="flex flex-wrap gap-3">
-        <Link to="/" className={buttonVariants({ size: 'lg' })}>
+        <Link
+          to={href('/')}
+          prefetch="intent"
+          className={buttonVariants({ size: 'lg' })}
+        >
           Go Home
         </Link>
         <Link
-          to="/merge"
+          to={href('/merge')}
+          prefetch="intent"
           className={buttonVariants({ variant: 'outline', size: 'lg' })}
         >
           Open Merge PDF

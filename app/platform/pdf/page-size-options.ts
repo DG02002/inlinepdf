@@ -1,6 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
-import type { ReactNode } from 'react';
-
 export interface StandardPageSizeOption {
   label: string;
   dimensionsLabel: string;
@@ -141,7 +138,7 @@ export function getPageSizeDimensionsInPoints(value: StandardPageSizeId): {
   width: number;
   height: number;
 } {
-  const option = STANDARD_PAGE_SIZE_OPTIONS[value];
+  const option = getStandardPageSizeOption(value);
 
   if (
     typeof option.widthMm !== 'number' ||
@@ -156,22 +153,8 @@ export function getPageSizeDimensionsInPoints(value: StandardPageSizeId): {
   };
 }
 
-export function getPageSizeOptionLabel(value: PageSizeSelectId): ReactNode {
-  if (value === AUTO_PAGE_SIZE_ID) {
-    return 'Auto';
-  }
-
-  return PageSizeOptionLabel(STANDARD_PAGE_SIZE_OPTIONS[value]);
-}
-
-export function PageSizeOptionLabel({
-  label,
-  dimensionsLabel,
-}: StandardPageSizeOption): ReactNode {
-  return (
-    <span className="inline-flex items-baseline gap-2">
-      <span>{label}</span>
-      <span className="text-muted-foreground">{dimensionsLabel}</span>
-    </span>
-  );
+export function getStandardPageSizeOption(
+  value: StandardPageSizeId,
+): StandardPageSizeOption {
+  return STANDARD_PAGE_SIZE_OPTIONS[value];
 }

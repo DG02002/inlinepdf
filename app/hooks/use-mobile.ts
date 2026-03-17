@@ -1,35 +1,29 @@
 import * as React from 'react';
 
 const MOBILE_BREAKPOINT = 768;
+const MOBILE_MEDIA_QUERY = `(max-width: ${String(MOBILE_BREAKPOINT - 1)}px)`;
 
 function getIsMobile() {
   if (typeof window === 'undefined') {
     return false;
   }
 
-  return window.matchMedia(`(max-width: ${String(MOBILE_BREAKPOINT - 1)}px)`)
-    .matches;
+  return window.matchMedia(MOBILE_MEDIA_QUERY).matches;
+}
+
+function subscribe(onStoreChange: () => void): () => void {
+  if (typeof window === 'undefined') {
+    return () => undefined;
+  }
+
+  const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
+  mediaQuery.addEventListener('change', onStoreChange);
+
+  return () => {
+    mediaQuery.removeEventListener('change', onStoreChange);
+  };
 }
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState(getIsMobile);
-
-  React.useEffect(() => {
-    const mediaQuery = window.matchMedia(
-      `(max-width: ${String(MOBILE_BREAKPOINT - 1)}px)`,
-    );
-
-    const onChange = () => {
-      setIsMobile(mediaQuery.matches);
-    };
-
-    mediaQuery.addEventListener('change', onChange);
-    onChange();
-
-    return () => {
-      mediaQuery.removeEventListener('change', onChange);
-    };
-  }, []);
-
-  return isMobile;
+  return React.useSyncExternalStore(subscribe, getIsMobile, () => false);
 }

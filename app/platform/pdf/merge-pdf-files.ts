@@ -46,6 +46,22 @@ async function readFileBytes(file: File): Promise<ArrayBuffer> {
   });
 }
 
+async function loadMergeSourceDocument(file: File): Promise<{
+  file: File;
+  source: PDFDocument;
+}> {
+  const bytes = await readFileBytes(file);
+
+  try {
+    return {
+      file,
+      source: await PDFDocument.load(bytes),
+    };
+  } catch {
+    throw new Error(`Unable to read PDF: ${file.name}`);
+  }
+}
+
 export class BrowserPdfLibMergeService {
   async merge(files: File[]): Promise<MergedPdfFile> {
     if (files.length < 2) {
@@ -59,17 +75,11 @@ export class BrowserPdfLibMergeService {
     });
 
     const merged = await PDFDocument.create();
+    const sourceDocuments = await Promise.all(
+      files.map((file) => loadMergeSourceDocument(file)),
+    );
 
-    for (const file of files) {
-      const bytes = await readFileBytes(file);
-
-      let source: PDFDocument;
-      try {
-        source = await PDFDocument.load(bytes);
-      } catch {
-        throw new Error(`Unable to read PDF: ${file.name}`);
-      }
-
+    for (const { source } of sourceDocuments) {
       const pages = await merged.copyPages(source, source.getPageIndices());
       for (const page of pages) {
         merged.addPage(page);

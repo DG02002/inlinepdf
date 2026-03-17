@@ -41,7 +41,7 @@ export async function organizePdfDocument(
 
   if (!isOrganizeRunOptions(options)) {
     throw new Error(
-      'Missing organize settings. Arrange pages before downloading.',
+      'Missing organize settings. Arrange pages before exporting.',
     );
   }
 

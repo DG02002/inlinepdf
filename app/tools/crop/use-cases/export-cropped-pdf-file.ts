@@ -40,10 +40,11 @@ export async function exportCroppedPdf({
   }
 
   const sourceBytes = new Uint8Array(await file.arrayBuffer());
-  const sourceDocument = await PDFDocument.load(sourceBytes);
   const outputDocument = await PDFDocument.create();
-
-  const pdfjs = await loadPdfJsModule();
+  const [sourceDocument, pdfjs] = await Promise.all([
+    PDFDocument.load(sourceBytes),
+    loadPdfJsModule(),
+  ]);
   type PdfDocumentProxy = Awaited<
     ReturnType<PdfJsModule['getDocument']>['promise']
   >;

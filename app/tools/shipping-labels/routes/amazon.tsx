@@ -1,23 +1,24 @@
-/* eslint-disable react-refresh/only-export-components */
+import type { Route } from './+types/amazon';
 import { amazonShippingLabelsToolDefinition } from '../definitions';
-import {
-  createShippingLabelClientAction,
-  createShippingLabelHydrateFallback,
-  createShippingLabelMeta,
-  ShippingLabelRoute,
-} from '../shared-route';
+import { ShippingLabelsToolScreen } from '../screen';
+import { createShippingLabelRouteModule } from '../create-route-module';
 
-export const meta = createShippingLabelMeta(amazonShippingLabelsToolDefinition);
-
-export const HydrateFallback = createShippingLabelHydrateFallback(
-  amazonShippingLabelsToolDefinition.title,
+const routeModule = createShippingLabelRouteModule(
+  amazonShippingLabelsToolDefinition,
+  'amazon',
 );
 
-export const clientAction = createShippingLabelClientAction('amazon');
+export function meta() {
+  return routeModule.meta();
+}
+
+export function clientAction(args: Route.ClientActionArgs) {
+  return routeModule.clientAction(args);
+}
 
 export default function AmazonShippingLabelsRoute() {
   return (
-    <ShippingLabelRoute
+    <ShippingLabelsToolScreen
       brand="amazon"
       title={amazonShippingLabelsToolDefinition.title}
       description={amazonShippingLabelsToolDefinition.shortDescription}

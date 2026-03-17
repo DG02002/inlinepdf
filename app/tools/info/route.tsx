@@ -1,12 +1,6 @@
-import type { MetaFunction } from 'react-router';
-
-import {
-  getActionErrorMessage,
-  type ToolActionResult,
-} from '~/shared/tool-ui/action-result';
-import { getFile, getString } from '~/platform/files/read-form-data';
-import { takeClientActionFallback } from '~/platform/files/client-action-fallback';
-import { validatePdfFile } from '~/platform/files/security/file-validation';
+import type { Route } from './+types/route';
+import { getFile } from '~/platform/files/read-form-data';
+import { createToolRouteModule } from '~/shared/tool-ui/create-tool-route-module';
 
 import { infoToolDefinition } from './definition';
 import type { PdfInfoResult } from './models';
@@ -17,46 +11,35 @@ interface PdfInfoActionPayload {
   file: File;
 }
 
-export const meta: MetaFunction = () => [
-  { title: `${infoToolDefinition.title} | InlinePDF` },
-  {
-    name: 'description',
-    content: infoToolDefinition.shortDescription,
+const routeModule = createToolRouteModule<
+  PdfInfoActionPayload,
+  { files: File[] },
+  PdfInfoResult,
+  PdfInfoResult
+>({
+  definition: infoToolDefinition,
+  errorMessage: 'Unable to read PDF information.',
+  parseInput({ formData, fallbackPayload }) {
+    const file = getFile(formData, 'file') ?? fallbackPayload?.file;
+    return { files: file ? [file] : [] };
   },
-];
+  execute({ files }) {
+    return extractPdfInfoForFile({ files });
+  },
+  getSuccessMessage() {
+    return 'PDF details ready.';
+  },
+  mapSuccessResult(result) {
+    return result;
+  },
+});
 
-export function HydrateFallback() {
-  return (
-    <p className="text-sm text-muted-foreground">Loading PDF info tool...</p>
-  );
+export function meta() {
+  return routeModule.meta();
 }
 
-export async function clientAction({
-  request,
-}: {
-  request: Request;
-}): Promise<ToolActionResult<PdfInfoResult>> {
-  const formData = await request.formData();
-  const submissionId = getString(formData, 'submissionId');
-  const fallbackPayload = submissionId
-    ? (takeClientActionFallback(submissionId) as PdfInfoActionPayload | null)
-    : null;
-  const file = getFile(formData, 'file') ?? fallbackPayload?.file;
-
-  if (!file) {
-    return {
-      ok: false,
-      message: 'Select a PDF file before extracting details.',
-    };
-  }
-
-  try {
-    await validatePdfFile(file);
-    const result = await extractPdfInfoForFile({ files: [file] });
-    return { ok: true, message: 'PDF details extracted.', result };
-  } catch (error: unknown) {
-    return getActionErrorMessage(error, 'Failed to extract PDF information.');
-  }
+export function clientAction(args: Route.ClientActionArgs) {
+  return routeModule.clientAction(args);
 }
 
 export default function InfoRoute() {

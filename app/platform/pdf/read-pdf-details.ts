@@ -10,9 +10,10 @@ export async function readPdfDetails(
   file: File,
 ): Promise<{ pageCount: number | null; previewDataUrl: string | null }> {
   let bytes: ArrayBuffer;
+  let pdfjs: Awaited<ReturnType<typeof loadPdfJsModule>>;
   try {
     await validatePdfFile(file);
-    bytes = await file.arrayBuffer();
+    [bytes, pdfjs] = await Promise.all([file.arrayBuffer(), loadPdfJsModule()]);
   } catch (error) {
     if (isSecurityValidationError(error)) {
       return { pageCount: null, previewDataUrl: null };
@@ -25,7 +26,6 @@ export async function readPdfDetails(
   let previewDataUrl: string | null = null;
 
   try {
-    const pdfjs = await loadPdfJsModule();
     const loadingTask = pdfjs.getDocument({ data: bytes });
     const pdfDocument = await loadingTask.promise;
 

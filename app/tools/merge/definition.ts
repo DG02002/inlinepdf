@@ -1,4 +1,4 @@
-import { GitMergeIcon } from '@hugeicons/core-free-icons';
+import GitMergeIcon from '@hugeicons/core-free-icons/GitMergeIcon';
 
 import type { ToolDefinition } from '~/tools/catalog/definitions';
 

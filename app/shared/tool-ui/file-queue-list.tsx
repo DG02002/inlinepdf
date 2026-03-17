@@ -1,7 +1,8 @@
+import Cancel01Icon from '@hugeicons/core-free-icons/Cancel01Icon';
+import File01Icon from '@hugeicons/core-free-icons/File01Icon';
 import { type ReactNode, useState } from 'react';
 import { DragOverlay } from '@dnd-kit/react';
 import { useSortable } from '@dnd-kit/react/sortable';
-import { Cancel01Icon, File01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { CspDragDropProvider } from '~/components/dnd/csp-drag-drop-provider';
 import { AspectRatio } from '~/components/ui/aspect-ratio';

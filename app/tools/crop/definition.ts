@@ -1,4 +1,4 @@
-import { CropIcon } from '@hugeicons/core-free-icons';
+import CropIcon from '@hugeicons/core-free-icons/CropIcon';
 
 import type { ToolDefinition } from '~/tools/catalog/definitions';
 

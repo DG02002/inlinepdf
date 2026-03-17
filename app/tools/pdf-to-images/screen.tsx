@@ -1,7 +1,3 @@
-import { useReducer, useRef } from 'react';
-import { useFetcher } from 'react-router';
-
-import { PdfFileSelector } from '~/components/pdf-file-selector';
 import { Button } from '~/components/ui/button';
 import {
   Field,
@@ -19,68 +15,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select';
-import { saveClientActionFallback } from '~/platform/files/client-action-fallback';
-import { readPdfDetails } from '~/platform/pdf/read-pdf-details';
 import {
   MAX_QUALITY_LONG_EDGE_TARGET_PX,
-  readPdfImageBaseResolution,
 } from '~/tools/pdf-to-images/service/render-pdf-to-images';
 import type {
   ImageOutputFormat,
   MaxDimensionCap,
-  PdfImageBaseResolution,
+  ResolutionInfo,
 } from '~/tools/pdf-to-images/models';
-import {
-  FileQueueList,
-  type QueuedFile,
-} from '~/shared/tool-ui/file-queue-list';
-import { ToolWorkspace } from '~/shared/tool-ui/tool-workspace';
+import { SinglePdfToolWorkspace } from '~/shared/tool-ui/single-pdf-tool-workspace';
 import { useSuccessToast } from '~/shared/tool-ui/use-success-toast';
-import { createFileEntryId } from '~/shared/tool-ui/create-file-entry-id';
-import type { ToolActionResult } from '~/shared/tool-ui/action-result';
+import {
+  type PageRangeMode,
+} from '~/tools/pdf-to-images/workspace-state';
+import { usePdfToImagesWorkspace } from '~/tools/pdf-to-images/use-pdf-to-images-workspace';
 
 import {
-  calculateResolutionInfo,
   isImageOutputFormat,
   isMaxDimensionCap,
-  parsePageRangeInput,
 } from './use-cases/convert-pdf-to-images';
-
-type PageRangeMode = 'all' | 'custom';
-
-interface PdfToImagesState {
-  selectedFileEntry: QueuedFile | null;
-  format: ImageOutputFormat;
-  maxDimensionCap: MaxDimensionCap;
-  pageRangeMode: PageRangeMode;
-  pageRangeInput: string;
-  baseResolution: PdfImageBaseResolution | null;
-  isReadingResolution: boolean;
-  localErrorMessage: string | null;
-}
-
-type PdfToImagesAction =
-  | { type: 'fileSelected'; entry: QueuedFile }
-  | {
-      type: 'fileDetailsLoaded';
-      entryId: string;
-      pageCount: number;
-      previewDataUrl: string | null;
-    }
-  | { type: 'fileDetailsFailed'; entryId: string }
-  | {
-      type: 'baseResolutionLoaded';
-      entryId: string;
-      baseResolution: PdfImageBaseResolution;
-    }
-  | { type: 'baseResolutionFailed'; message: string }
-  | { type: 'readingFinished' }
-  | { type: 'selectionCleared' }
-  | { type: 'formatChanged'; format: ImageOutputFormat }
-  | { type: 'maxDimensionCapChanged'; maxDimensionCap: MaxDimensionCap }
-  | { type: 'pageRangeModeChanged'; pageRangeMode: PageRangeMode }
-  | { type: 'pageRangeInputChanged'; value: string }
-  | { type: 'localErrorCleared' };
 
 const FORMAT_OPTIONS: { value: ImageOutputFormat; label: string }[] = [
   { value: 'png', label: 'PNG' },
@@ -103,118 +56,6 @@ const customRangeInputId = 'pdf-to-images-custom-range';
 const outputFormatLabelId = 'pdf-to-images-format-label';
 const maxDimensionCapLabelId = 'pdf-to-images-max-dimension-label';
 const pageRangeModeLabelId = 'pdf-to-images-page-range-label';
-
-const initialState: PdfToImagesState = {
-  selectedFileEntry: null,
-  format: 'png',
-  maxDimensionCap: 5000,
-  pageRangeMode: 'all',
-  pageRangeInput: '1',
-  baseResolution: null,
-  isReadingResolution: false,
-  localErrorMessage: null,
-};
-
-function pdfToImagesReducer(
-  state: PdfToImagesState,
-  action: PdfToImagesAction,
-): PdfToImagesState {
-  switch (action.type) {
-    case 'fileSelected':
-      return {
-        ...state,
-        selectedFileEntry: action.entry,
-        baseResolution: null,
-        pageRangeMode: 'all',
-        pageRangeInput: '1',
-        isReadingResolution: true,
-        localErrorMessage: null,
-      };
-    case 'fileDetailsLoaded':
-      return {
-        ...state,
-        selectedFileEntry:
-          state.selectedFileEntry?.id === action.entryId
-            ? {
-                ...state.selectedFileEntry,
-                pageCount: action.pageCount,
-                previewDataUrl: action.previewDataUrl,
-                previewStatus: action.previewDataUrl ? 'ready' : 'unavailable',
-              }
-            : state.selectedFileEntry,
-      };
-    case 'fileDetailsFailed':
-      return {
-        ...state,
-        selectedFileEntry:
-          state.selectedFileEntry?.id === action.entryId
-            ? {
-                ...state.selectedFileEntry,
-                previewStatus: 'unavailable',
-              }
-            : state.selectedFileEntry,
-      };
-    case 'baseResolutionLoaded':
-      return {
-        ...state,
-        baseResolution: action.baseResolution,
-        selectedFileEntry:
-          state.selectedFileEntry?.id === action.entryId
-            ? {
-                ...state.selectedFileEntry,
-                pageCount:
-                  state.selectedFileEntry.pageCount ??
-                  action.baseResolution.pageCount,
-              }
-            : state.selectedFileEntry,
-      };
-    case 'baseResolutionFailed':
-      return {
-        ...state,
-        localErrorMessage: action.message,
-      };
-    case 'readingFinished':
-      return {
-        ...state,
-        isReadingResolution: false,
-      };
-    case 'selectionCleared':
-      return {
-        ...state,
-        selectedFileEntry: null,
-        baseResolution: null,
-        isReadingResolution: false,
-        localErrorMessage: null,
-      };
-    case 'formatChanged':
-      return {
-        ...state,
-        format: action.format,
-      };
-    case 'maxDimensionCapChanged':
-      return {
-        ...state,
-        maxDimensionCap: action.maxDimensionCap,
-      };
-    case 'pageRangeModeChanged':
-      return {
-        ...state,
-        pageRangeMode: action.pageRangeMode,
-      };
-    case 'pageRangeInputChanged':
-      return {
-        ...state,
-        pageRangeInput: action.value,
-      };
-    case 'localErrorCleared':
-      return {
-        ...state,
-        localErrorMessage: null,
-      };
-    default:
-      return state;
-  }
-}
 
 interface PdfToImagesOptionsPanelProps {
   format: ImageOutputFormat;
@@ -385,7 +226,7 @@ function PdfToImagesResolutionPreview({
   maxDimensionCap,
 }: {
   isReadingResolution: boolean;
-  resolutionInfo: ReturnType<typeof calculateResolutionInfo> | null;
+  resolutionInfo: ResolutionInfo | null;
   selectedPageCount: number | null;
   maxDimensionCap: MaxDimensionCap;
 }) {
@@ -430,219 +271,65 @@ function PdfToImagesResolutionPreview({
 }
 
 export function PdfToImagesToolScreen() {
-  const fetcher = useFetcher<ToolActionResult>();
-  const activeEntryIdRef = useRef<string | null>(null);
-  const [state, dispatch] = useReducer(pdfToImagesReducer, initialState);
+  const workspace = usePdfToImagesWorkspace();
 
-  const isConverting = fetcher.state !== 'idle';
-  const hasSelectedFile = !!state.selectedFileEntry;
-  const resolutionInfo = state.baseResolution
-    ? calculateResolutionInfo(state.baseResolution, state.maxDimensionCap)
-    : null;
-  const selectedPageCount = (() => {
-    if (!state.baseResolution) {
-      return null;
-    }
-
-    if (state.pageRangeMode === 'all') {
-      return state.baseResolution.pageCount;
-    }
-
-    try {
-      return parsePageRangeInput(
-        state.pageRangeInput,
-        state.baseResolution.pageCount,
-      ).length;
-    } catch {
-      return null;
-    }
-  })();
-  const hasValidPageRange =
-    state.pageRangeMode === 'all' || selectedPageCount !== null;
-  const canConvert =
-    hasSelectedFile &&
-    !!state.baseResolution &&
-    hasValidPageRange &&
-    !isConverting;
-  const actionErrorMessage =
-    fetcher.data && !fetcher.data.ok ? fetcher.data.message : null;
-  const errorMessage = state.localErrorMessage ?? actionErrorMessage;
-  const successMessage = fetcher.data?.ok ? fetcher.data.message : null;
-
-  useSuccessToast(successMessage);
-
-  function handleFileSelection(file: File) {
-    const entryId = createFileEntryId(file);
-    activeEntryIdRef.current = entryId;
-
-    dispatch({
-      type: 'fileSelected',
-      entry: {
-        id: entryId,
-        file,
-        pageCount: null,
-        previewDataUrl: null,
-        previewStatus: 'loading',
-      },
-    });
-
-    void readPdfDetails(file)
-      .then((details) => {
-        if (activeEntryIdRef.current !== entryId) {
-          return;
-        }
-
-        if (details.pageCount === null) {
-          dispatch({ type: 'fileDetailsFailed', entryId });
-          return;
-        }
-
-        dispatch({
-          type: 'fileDetailsLoaded',
-          entryId,
-          pageCount: details.pageCount,
-          previewDataUrl: details.previewDataUrl,
-        });
-      })
-      .catch(() => {
-        if (activeEntryIdRef.current !== entryId) {
-          return;
-        }
-
-        dispatch({ type: 'fileDetailsFailed', entryId });
-      });
-
-    void readPdfImageBaseResolution(file)
-      .then((baseResolution) => {
-        if (activeEntryIdRef.current !== entryId) {
-          return;
-        }
-
-        dispatch({ type: 'baseResolutionLoaded', entryId, baseResolution });
-      })
-      .catch((error: unknown) => {
-        if (activeEntryIdRef.current !== entryId) {
-          return;
-        }
-
-        const fallback = 'Failed to read PDF resolution.';
-        dispatch({
-          type: 'baseResolutionFailed',
-          message: error instanceof Error ? error.message : fallback,
-        });
-      })
-      .finally(() => {
-        if (activeEntryIdRef.current === entryId) {
-          dispatch({ type: 'readingFinished' });
-        }
-      });
-  }
-
-  function handleClearSelection() {
-    if (isConverting) {
-      return;
-    }
-
-    activeEntryIdRef.current = null;
-    dispatch({ type: 'selectionCleared' });
-  }
-
-  function handleConvert() {
-    if (!state.selectedFileEntry || !state.baseResolution) {
-      return;
-    }
-
-    dispatch({ type: 'localErrorCleared' });
-
-    const selectedPageNumbers =
-      state.pageRangeMode === 'all'
-        ? undefined
-        : parsePageRangeInput(
-            state.pageRangeInput,
-            state.baseResolution.pageCount,
-          );
-
-    const payload = {
-      file: state.selectedFileEntry.file,
-      format: state.format,
-      maxDimensionCap: state.maxDimensionCap,
-      pageNumbers: selectedPageNumbers,
-    };
-    const submissionId = saveClientActionFallback(payload);
-    const formData = new FormData();
-    formData.set('file', state.selectedFileEntry.file);
-    formData.set('format', state.format);
-    formData.set('maxDimensionCap', String(state.maxDimensionCap));
-    if (selectedPageNumbers) {
-      formData.set('pageNumbers', JSON.stringify(selectedPageNumbers));
-    }
-    formData.set('submissionId', submissionId);
-
-    void fetcher.submit(formData, { method: 'post' });
-  }
+  useSuccessToast(workspace.successMessage);
 
   return (
-    <ToolWorkspace
+    <SinglePdfToolWorkspace
       title="PDF to Images"
-      description="Convert every PDF page into PNG, JPEG, or WEBP and download one ZIP."
-      inputPanel={
-        state.selectedFileEntry ? (
-          <FileQueueList
-            files={[state.selectedFileEntry]}
-            disabled={isConverting}
-            onRemove={handleClearSelection}
-          />
-        ) : (
-          <PdfFileSelector
-            ariaLabel="Select PDF file"
-            onSelect={(files) => {
-              handleFileSelection(files[0]);
-            }}
-            disabled={isConverting}
-          />
-        )
-      }
+      description="Export PDF pages as PNG, JPEG, or WEBP files in a ZIP archive."
+      selectorAriaLabel="Select PDF file"
+      selectedFileEntry={workspace.selectedFileEntry}
+      isBusy={workspace.isConverting}
+      onSelectFile={workspace.handleFileSelection}
+      onClearSelection={workspace.handleClearSelection}
       optionsPanel={
-        hasSelectedFile ? (
+        workspace.hasSelectedFile ? (
           <PdfToImagesOptionsPanel
-            format={state.format}
-            maxDimensionCap={state.maxDimensionCap}
-            pageRangeMode={state.pageRangeMode}
-            pageRangeInput={state.pageRangeInput}
-            selectedPageCount={selectedPageCount}
-            disabled={isConverting}
+            format={workspace.format}
+            maxDimensionCap={workspace.maxDimensionCap}
+            pageRangeMode={workspace.pageRangeMode}
+            pageRangeInput={workspace.pageRangeInput}
+            selectedPageCount={workspace.selectedPageCount}
+            disabled={workspace.isConverting}
             onFormatChange={(format) => {
-              dispatch({ type: 'formatChanged', format });
+              workspace.changeFormat(format);
             }}
             onMaxDimensionCapChange={(maxDimensionCap) => {
-              dispatch({ type: 'maxDimensionCapChanged', maxDimensionCap });
+              workspace.changeMaxDimensionCap(maxDimensionCap);
             }}
             onPageRangeModeChange={(pageRangeMode) => {
-              dispatch({ type: 'pageRangeModeChanged', pageRangeMode });
+              workspace.changePageRangeMode(pageRangeMode);
             }}
             onPageRangeInputChange={(value) => {
-              dispatch({ type: 'pageRangeInputChanged', value });
+              workspace.changePageRangeInput(value);
             }}
           />
         ) : null
       }
       outputPanel={
-        hasSelectedFile ? (
+        workspace.hasSelectedFile ? (
           <PdfToImagesResolutionPreview
-            isReadingResolution={state.isReadingResolution}
-            resolutionInfo={resolutionInfo}
-            selectedPageCount={selectedPageCount}
-            maxDimensionCap={state.maxDimensionCap}
+            isReadingResolution={workspace.isReadingResolution}
+            resolutionInfo={workspace.resolutionInfo}
+            selectedPageCount={workspace.selectedPageCount}
+            maxDimensionCap={workspace.maxDimensionCap}
           />
         ) : null
       }
       actionBar={
-        hasSelectedFile ? (
+        workspace.hasSelectedFile ? (
           <div className="space-y-2">
-            <Button disabled={!canConvert} onClick={handleConvert}>
-              {isConverting ? 'Converting...' : 'Convert and Download ZIP'}
+            <Button
+              disabled={!workspace.canConvert}
+              onClick={() => {
+                workspace.handleConvert();
+              }}
+            >
+              {workspace.isConverting ? 'Converting...' : 'Export Image Archive'}
             </Button>
-            {isConverting ? (
+            {workspace.isConverting ? (
               <p className="text-sm text-muted-foreground" aria-live="polite">
                 Converting pages...
               </p>
@@ -650,7 +337,7 @@ export function PdfToImagesToolScreen() {
           </div>
         ) : null
       }
-      errorMessage={errorMessage}
+      errorMessage={workspace.errorMessage}
     />
   );
 }

@@ -1,25 +1,23 @@
-/* eslint-disable react-refresh/only-export-components */
+import type { Route } from './+types/flipkart';
 import { flipkartShippingLabelsToolDefinition } from '../definitions';
-import {
-  createShippingLabelClientAction,
-  createShippingLabelHydrateFallback,
-  createShippingLabelMeta,
-  ShippingLabelRoute,
-} from '../shared-route';
+import { ShippingLabelsToolScreen } from '../screen';
+import { createShippingLabelRouteModule } from '../create-route-module';
 
-export const meta = createShippingLabelMeta(
+const routeModule = createShippingLabelRouteModule(
   flipkartShippingLabelsToolDefinition,
+  'flipkart',
 );
+export function meta() {
+  return routeModule.meta();
+}
 
-export const HydrateFallback = createShippingLabelHydrateFallback(
-  flipkartShippingLabelsToolDefinition.title,
-);
-
-export const clientAction = createShippingLabelClientAction('flipkart');
+export function clientAction(args: Route.ClientActionArgs) {
+  return routeModule.clientAction(args);
+}
 
 export default function FlipkartShippingLabelsRoute() {
   return (
-    <ShippingLabelRoute
+    <ShippingLabelsToolScreen
       brand="flipkart"
       title={flipkartShippingLabelsToolDefinition.title}
       description={flipkartShippingLabelsToolDefinition.shortDescription}

@@ -1,4 +1,4 @@
-import { InformationCircleIcon } from '@hugeicons/core-free-icons';
+import InformationCircleIcon from '@hugeicons/core-free-icons/InformationCircleIcon';
 
 import type { ToolDefinition } from '~/tools/catalog/definitions';
 

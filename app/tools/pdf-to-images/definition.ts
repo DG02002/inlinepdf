@@ -1,4 +1,4 @@
-import { ImageDownloadIcon } from '@hugeicons/core-free-icons';
+import ImageDownloadIcon from '@hugeicons/core-free-icons/ImageDownloadIcon';
 
 import type { ToolDefinition } from '~/tools/catalog/definitions';
 
@@ -7,7 +7,7 @@ export const pdfToImagesToolDefinition = {
   slug: 'pdf-to-images',
   path: '/pdf-to-images',
   title: 'PDF to Images',
-  shortDescription: 'Export PDF pages into image files and a ZIP download.',
+  shortDescription: 'Export PDF pages as image files in a ZIP archive.',
   navGroup: 'Convert',
   icon: ImageDownloadIcon,
   availability: 'available',

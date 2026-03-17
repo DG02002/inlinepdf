@@ -1,17 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useRouteLoaderData } from 'react-router';
-
 import { ToggleGroup, ToggleGroupItem } from '~/components/ui/toggle-group';
 import {
-  applyThemePreference,
-  readThemeStateFromDocument,
   setThemePreference,
-  subscribeToThemeChanges,
-  subscribeToSystemThemeChanges,
   themePreferences,
   type ThemePreference,
 } from '~/lib/theme';
-import type { loader as rootLoader } from '~/root';
+import { useThemeState } from '~/hooks/use-theme-state';
 
 const themeOptionLabels: Record<ThemePreference, string> = {
   light: 'Light',
@@ -20,41 +13,13 @@ const themeOptionLabels: Record<ThemePreference, string> = {
 };
 
 export function ThemePicker() {
-  const rootData = useRouteLoaderData<typeof rootLoader>('root');
-  const [theme, setTheme] = useState<ThemePreference>(() => {
-    if (typeof window === 'undefined') {
-      return rootData?.preference ?? 'auto';
-    }
-
-    if (document.documentElement.hasAttribute('data-theme-preference')) {
-      return readThemeStateFromDocument().preference;
-    }
-
-    return rootData?.preference ?? 'auto';
-  });
-
-  useEffect(() => {
-    applyThemePreference(theme);
-  }, [theme]);
-
-  useEffect(() => {
-    return subscribeToSystemThemeChanges(() => {
-      if (theme === 'auto') {
-        applyThemePreference('auto');
-      }
-    });
-  }, [theme]);
-
-  useEffect(() => {
-    return subscribeToThemeChanges(({ preference }) => {
-      setTheme((currentTheme) =>
-        currentTheme === preference ? currentTheme : preference,
-      );
-    });
-  }, []);
+  const { preference: theme } = useThemeState();
 
   function handleThemeSelect(nextTheme: ThemePreference) {
-    setTheme(nextTheme);
+    if (nextTheme === theme) {
+      return;
+    }
+
     setThemePreference(nextTheme);
   }
 

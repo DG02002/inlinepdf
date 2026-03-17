@@ -1,4 +1,4 @@
-import { ImageUploadIcon } from '@hugeicons/core-free-icons';
+import ImageUploadIcon from '@hugeicons/core-free-icons/ImageUploadIcon';
 
 import type { ToolDefinition } from '~/tools/catalog/definitions';
 
@@ -7,7 +7,7 @@ export const imageToPdfToolDefinition = {
   slug: 'image-to-pdf',
   path: '/image-to-pdf',
   title: 'Image to PDF',
-  shortDescription: 'Convert JPG and PNG images into a single PDF.',
+  shortDescription: 'Combine JPG and PNG images into one PDF.',
   navGroup: 'Convert',
   icon: ImageUploadIcon,
   availability: 'available',
