@@ -1,63 +1,43 @@
-# InlinePDF
+<p align="center">
+  <img src="./public/icons/hero-logo-light-1024.png" alt="InlinePDF Logo" width="132" />
+</p>
+<h1 align="center">InlinePDF</h1>
 
-InlinePDF is a local-first PDF app for working with PDF and image files on device.
+InlinePDF is a local-first PDF workspace for fast document operations without mandatory cloud upload.
 
-## Core Product Rules
+Many PDF tools require server upload before merge, crop, extract, or conversion workflows can start. InlinePDF addresses that privacy and latency problem by running core file processing in the browser on local files. The result is a direct workflow for everyday PDF work, including retailer label preparation.
 
-- All PDF processing runs on device.
-- Files are never sent to a server.
-- No server-side PDF processing.
-- No authentication, database, or user accounts.
-- Features are shipped only when they can run fully local-first.
+![InlinePDF Preview](./assets/readme/inlinepdf-preview.png)
 
-## Current Pages
+## What InlinePDF Does
 
-- `/` Home (Header + Hero + Footer)
-- `/merge` Merge PDF
-- `/crop` Crop PDF
-- `/organize` Organize PDF
-- `/image-to-pdf` Image to PDF
-- `/pdf-to-images` PDF to Images
-- `/info` PDF Info
+### Core Tools
 
-## Tech Stack
+**Merge PDF** combines multiple PDFs in a selected order.  
+**Extract Pages** creates a new PDF from selected pages.  
+**Crop PDF** applies precise page-level cropping controls.  
+**Image to PDF** combines JPG and PNG files into one PDF.  
+**PDF to Images** exports pages as images in a ZIP archive.  
+**PDF Info** inspects metadata, producer details, and font data locally.
 
-- React Router + Vite + TypeScript
-- Tailwind CSS + shadcn component primitives
-- PDF-Lib for PDF merging
-- PDF.js adapter scaffold for future local-first tools
-- Cloudflare Workers deployment target
+### Retailer Label Workflows
 
-## Cloudflare Runtime Contract
+InlinePDF includes dedicated shipping-label preparation for **Meesho Labels**, **Amazon Labels**, and **Flipkart Labels** from marketplace PDFs.
 
-- The app is local-first. PDF and image processing stays in the browser and is not sent to the Worker.
-- The Worker serves the app shell and route responses only. It does not store, inspect, or transform PDF file contents selected in the app.
-- Runtime logs must stay metadata-only. Do not log request bodies, cookies, or user file contents.
-- Static assets are emitted by the React Router build and deployed alongside the Worker.
-- The top-level Wrangler configuration is the default production target. Use `wrangler deploy --env staging` for the staging Worker.
+## What Is Unique
 
-## Folder Architecture
+Document operations run in-browser instead of remote processing. The same product includes general-purpose PDF tools and retailer label workflows, so multiple document tasks stay in one local-first workspace. The architecture is modular, which keeps feature delivery focused and predictable.
 
-- `app/components/layout/*` shared shell (`SiteHeader`, `SiteFooter`, `SiteShell`)
-- `app/components/ui/*` shadcn/base-ui primitives
-- `app/shared/navigation/*` header and mobile navigation built from tool definitions
-- `app/shared/tool-ui/*` reusable workspace UI and action helpers
-- `app/platform/files/*` file validation, form parsing, client fallbacks, file saving
-- `app/platform/pdf/*` low-level PDF infrastructure (`pdf-lib`, `pdfjs`)
-- `app/tools/catalog/*` implemented tool definitions used by home and nav
-- `app/tools/<tool>/*` vertical slices owning route, screen, models, and use-cases
-- `app/routes.ts` top-level route composition
-- `assets/branding/source/*` design-source icon files (not served at runtime)
-- `public/icons/*` runtime-served app icons, favicons, and hero logos
+## Build, Test, and Deploy
 
-## Local Development
+### Local Development
 
 ```bash
 pnpm install
 pnpm run dev
 ```
 
-## Quality Gates
+### Quality Gates
 
 ```bash
 pnpm run lint
@@ -66,40 +46,40 @@ pnpm run build
 pnpm run test
 ```
 
-## Local Release Readiness
+### Local Release Readiness
 
 ```bash
 pnpm run verify
 ```
 
-This runs the full local release gate sequence (lint, typecheck, tests, and build)
-without deploying.
+This command runs linting, type checks, tests, and build in sequence.
 
-## Cloudflare Deploy
+### Cloudflare Deploy
 
 ```bash
 pnpm run deploy
 ```
 
-- `pnpm run build` generates the Worker and static asset output under `build/`.
-- `wrangler deploy` deploys the generated Worker build for production.
-- For staging deploys, build first and then run `wrangler deploy --env staging`.
-- Keep Cloudflare config changes small and explicit. This app does not require server-side PDF processing, storage bindings, or background workflow products.
+`pnpm run build` generates Worker and static asset output under `build/`. `wrangler deploy` publishes the production Worker build. For staging, run `wrangler deploy --env staging` after build.
 
-## Security Hygiene
+## License
 
-```bash
-pnpm run security:deps
-```
+InlinePDF is released under the MIT License.
 
-- Keep the `pnpm-lock.yaml` file committed and review dependency changes before merging.
-- Prefer self-hosted runtime assets over CDN script tags.
-- Do not add third-party tag-manager or analytics scripts that execute with app-origin privileges.
+### Acknowledgments
 
-## Adding New Tools
+**PDF.js:** PDF rendering and parsing are powered by Mozilla's `pdfjs-dist`. ([License](https://github.com/mozilla/pdf.js/blob/master/LICENSE))
 
-1. Create a slice under `app/tools/<tool-name>/` with `definition.ts`, `route.tsx`, `screen.tsx`, and explicit `use-cases/*`.
-2. Add the tool definition to `app/tools/catalog/definitions.ts`.
-3. Map the route in `app/routes.ts` using a top-level path like `/merge` or `/crop`.
-4. Reuse `app/shared/tool-ui/*` and `app/components/ui/*` only when the behavior is truly shared.
-5. Keep processing local-only. If a tool is not ready, do not add it to the implemented tool catalog.
+**pdf-lib:** PDF creation and document manipulation are powered by `pdf-lib`. ([License](https://github.com/Hopding/pdf-lib/blob/master/LICENSE.md))
+
+**React + React Router + Vite:** Application runtime and UI delivery are built with React, React Router, and Vite. ([License](https://github.com/facebook/react/blob/main/LICENSE), [License](https://github.com/remix-run/react-router/blob/main/LICENSE.md), [License](https://github.com/vitejs/vite/blob/main/LICENSE))
+
+**Tailwind CSS + shadcn/ui + Base UI:** Design system and component primitives are built with Tailwind CSS, shadcn, and Base UI. ([License](https://github.com/tailwindlabs/tailwindcss/blob/master/LICENSE), [License](https://github.com/shadcn-ui/ui/blob/main/LICENSE.md), [License](https://github.com/mui/base-ui/blob/master/LICENSE))
+
+**dnd-kit:** Drag-and-drop interactions for file and page workflows are powered by `@dnd-kit`. ([License](https://github.com/clauderic/dnd-kit/blob/master/LICENSE))
+
+**JSZip:** ZIP export workflows are powered by `jszip`. ([License](https://github.com/Stuk/jszip/blob/main/LICENSE.markdown))
+
+**Hugeicons:** Product iconography uses `@hugeicons/core-free-icons` and `@hugeicons/react`. ([License](https://github.com/hugeicons/hugeicons-react/blob/main/LICENSE))
+
+**Cloudflare Workers:** Deployment and edge delivery are hosted on Cloudflare Workers.

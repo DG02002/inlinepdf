@@ -41,7 +41,7 @@ describe('shipping labels route clientAction', () => {
     {
       ...amazonShippingLabelsToolDefinition,
       title: 'Meesho Labels',
-      shortDescription: 'Prepare Meesho labels from marketplace PDFs.',
+      shortDescription: 'Prepare Meesho shipping labels for printing.',
     },
     'meesho',
   ).clientAction;
