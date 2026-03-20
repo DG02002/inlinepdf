@@ -22,6 +22,9 @@ function createQueuedFile(overrides: Partial<QueuedFile> = {}): QueuedFile {
 function createPreviewSession(pageCount: number) {
   return {
     pageCount,
+    getPageAspectRatio() {
+      return Promise.resolve(3 / 4);
+    },
     getPageThumbnail() {
       return Promise.resolve<string | null>(null);
     },
@@ -53,6 +56,11 @@ describe('organizeWorkspaceReducer', () => {
     expect(state.previewSession).toBe(previewSession);
     expect(state.pageStates.map((page) => page.sourcePageNumber)).toEqual([
       1, 2, 3,
+    ]);
+    expect(state.pageStates.map((page) => page.aspectRatio)).toEqual([
+      3 / 4,
+      3 / 4,
+      3 / 4,
     ]);
     expect(state.selectedFileEntry?.pageCount).toBe(3);
     expect(state.isReadingPdf).toBe(false);

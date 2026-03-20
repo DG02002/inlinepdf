@@ -43,6 +43,7 @@ export type OrganizeWorkspaceAction =
       pageId: string;
       thumbnailDataUrl: string | null;
     }
+  | { type: 'pageAspectRatioLoaded'; pageId: string; aspectRatio: number }
   | { type: 'pageThumbnailUnavailable'; pageId: string };
 
 export const initialOrganizeWorkspaceState: OrganizeWorkspaceState = {
@@ -133,6 +134,7 @@ function createOrganizePageStates(pageCount: number): OrganizePageState[] {
     id: `page-${String(index + 1)}`,
     sourcePageNumber: index + 1,
     rotationQuarterTurns: 0,
+    aspectRatio: 3 / 4,
     isDeleted: false,
     thumbnailDataUrl: null,
     thumbnailStatus: 'idle' as const,
@@ -296,6 +298,18 @@ export function organizeWorkspaceReducer(
                   ? 'ready'
                   : 'unavailable',
                 thumbnailDataUrl: action.thumbnailDataUrl,
+              }
+            : page,
+        ),
+      };
+    case 'pageAspectRatioLoaded':
+      return {
+        ...state,
+        pageStates: state.pageStates.map((page) =>
+          page.id === action.pageId
+            ? {
+                ...page,
+                aspectRatio: action.aspectRatio,
               }
             : page,
         ),

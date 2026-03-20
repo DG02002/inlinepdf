@@ -46,7 +46,43 @@ export async function readOrganizePreview(
   }
 
   const thumbnailCache = new Map<number, string | null>();
+  const aspectRatioCache = new Map<number, number>();
   let isDestroyed = false;
+
+  async function getPageAspectRatio(pageNumber: number): Promise<number> {
+    if (isDestroyed) {
+      throw new Error('Preview session is no longer available.');
+    }
+
+    if (
+      !Number.isInteger(pageNumber) ||
+      pageNumber < 1 ||
+      pageNumber > pdfDocument.numPages
+    ) {
+      throw new Error(
+        `Page ${String(pageNumber)} is outside the document range.`,
+      );
+    }
+
+    const cached = aspectRatioCache.get(pageNumber);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const page = await pdfDocument.getPage(pageNumber);
+    try {
+      const viewport = page.getViewport({ scale: 1 });
+      const aspectRatio =
+        viewport.width > 0 && viewport.height > 0
+          ? viewport.width / viewport.height
+          : 3 / 4;
+
+      aspectRatioCache.set(pageNumber, aspectRatio);
+      return aspectRatio;
+    } finally {
+      cleanupPdfJsPage(page);
+    }
+  }
 
   async function getPageThumbnail(pageNumber: number): Promise<string | null> {
     if (isDestroyed) {
@@ -71,6 +107,12 @@ export async function readOrganizePreview(
     const page = await pdfDocument.getPage(pageNumber);
     try {
       const baseViewport = page.getViewport({ scale: 1 });
+      aspectRatioCache.set(
+        pageNumber,
+        baseViewport.width > 0 && baseViewport.height > 0
+          ? baseViewport.width / baseViewport.height
+          : 3 / 4,
+      );
       const thumbnailScale = clampScale(
         Math.min(
           THUMBNAIL_MAX_WIDTH / baseViewport.width,
@@ -114,6 +156,7 @@ export async function readOrganizePreview(
 
     isDestroyed = true;
     thumbnailCache.clear();
+    aspectRatioCache.clear();
 
     await session.destroy();
   }
@@ -121,6 +164,7 @@ export async function readOrganizePreview(
   return {
     pageCount: pdfDocument.numPages,
     getPageThumbnail,
+    getPageAspectRatio,
     destroy,
   };
 }

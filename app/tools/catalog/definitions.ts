@@ -55,7 +55,7 @@ export const toolNavigationGroups: readonly ToolNavigationGroup[] = [
 ];
 
 export const toolIconFallbacks = {
-  organize: ArrangeIcon,
+  'extract-pages': ArrangeIcon,
   crop: CropIcon,
   merge: GitMergeIcon,
   'image-to-pdf': ImageToPdfToolIcon,

@@ -22,8 +22,8 @@ function createPdfJsLoadingTask(pageCount: number) {
   const getPageMock = vi.fn((pageNumber: number) =>
     Promise.resolve({
       getViewport: ({ scale }: { scale: number }) => ({
-        width: 200 * scale,
-        height: 300 * scale,
+        width: (pageNumber === 2 ? 300 : 200) * scale,
+        height: (pageNumber === 2 ? 200 : 300) * scale,
         rotation: 0,
       }),
       render: vi.fn(() => ({
@@ -54,7 +54,7 @@ function createPdfJsLoadingTask(pageCount: number) {
 }
 
 describe('readOrganizePreview', () => {
-  it('returns pageCount and caches rendered thumbnails', async () => {
+  it('returns pageCount, page ratios, and caches rendered thumbnails', async () => {
     const { loadingTask, getPageMock, documentDestroy, loadingTaskDestroy } =
       createPdfJsLoadingTask(3);
     getDocumentMock.mockReturnValueOnce(loadingTask);
@@ -75,10 +75,14 @@ describe('readOrganizePreview', () => {
 
     const first = await session.getPageThumbnail(1);
     const second = await session.getPageThumbnail(1);
+    const portraitRatio = await session.getPageAspectRatio(1);
+    const landscapeRatio = await session.getPageAspectRatio(2);
 
     expect(first).toBe('data:image/png;base64,mock-thumb');
     expect(second).toBe('data:image/png;base64,mock-thumb');
-    expect(getPageMock).toHaveBeenCalledTimes(1);
+    expect(portraitRatio).toBeCloseTo(200 / 300);
+    expect(landscapeRatio).toBeCloseTo(300 / 200);
+    expect(getPageMock).toHaveBeenCalledTimes(2);
 
     await session.destroy();
 

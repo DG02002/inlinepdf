@@ -8,7 +8,7 @@ export default [
   index('routes/home.tsx'),
   route('merge', 'tools/merge/route.tsx'),
   route('crop', 'tools/crop/route.tsx'),
-  route('organize', 'tools/organize/route.tsx'),
+  route('extract-pages', 'tools/organize/route.tsx'),
   route('image-to-pdf', 'tools/image-to-pdf/route.tsx'),
   route('pdf-to-images', 'tools/pdf-to-images/route.tsx'),
   route('meesho-labels', 'tools/shipping-labels/routes/meesho.tsx'),

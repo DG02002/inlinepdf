@@ -281,6 +281,7 @@ export function PdfToImagesToolScreen() {
       selectorAriaLabel="Select PDF file"
       selectedFileEntry={workspace.selectedFileEntry}
       isBusy={workspace.isConverting}
+      selectedFileListClassName="grid grid-cols-1 items-start gap-3 [contain:layout] sm:grid-cols-2 lg:grid-cols-3"
       onSelectFile={workspace.handleFileSelection}
       onClearSelection={workspace.handleClearSelection}
       optionsPanel={

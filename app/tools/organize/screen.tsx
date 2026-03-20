@@ -1,8 +1,7 @@
 import { type ReactNode, useState } from 'react';
 import { DragOverlay } from '@dnd-kit/react';
 import { useSortable } from '@dnd-kit/react/sortable';
-import Cancel01Icon from '@hugeicons/core-free-icons/Cancel01Icon';
-import Rotate02Icon from '@hugeicons/core-free-icons/Rotate02Icon';
+import Tick02Icon from '@hugeicons/core-free-icons/Tick02Icon';
 import { HugeiconsIcon } from '@hugeicons/react';
 
 import { CspDragDropProvider } from '~/components/dnd/csp-drag-drop-provider';
@@ -10,8 +9,6 @@ import { PdfFileSelector } from '~/components/pdf-file-selector';
 import { AspectRatio } from '~/components/ui/aspect-ratio';
 import { Button } from '~/components/ui/button';
 import { Spinner } from '~/components/ui/spinner';
-import { Card, CardContent } from '~/components/ui/card';
-import { Checkbox } from '~/components/ui/checkbox';
 import {
   FileQueueList,
   type QueuedFile,
@@ -25,24 +22,21 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '~/components/ui/pagination';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '~/components/ui/tooltip';
+import { TooltipProvider } from '~/components/ui/tooltip';
 import type { OrganizePageState } from '~/tools/organize/models';
-import { quarterTurnsToDegrees } from '~/tools/organize/models';
+import {
+  getDisplayedPageAspectRatio,
+  quarterTurnsToDegrees,
+} from '~/tools/organize/models';
 import { organizeToolDefinition } from '~/tools/organize/definition';
 import { ToolWorkspace } from '~/shared/tool-ui/tool-workspace';
 import { useSuccessToast } from '~/shared/tool-ui/use-success-toast';
 import { buildOrganizePaginationItems } from '~/tools/organize/workspace-state';
 import { useOrganizeWorkspace } from '~/tools/organize/use-organize-workspace';
 import { cn } from '~/lib/utils';
-const OVERLAY_ICON_BUTTON_CLASS =
-  'rounded-full border-border bg-white text-foreground shadow-sm hover:bg-white active:bg-white';
+
 const PAGE_CARD_CLASS_NAME =
-  'rounded-2xl select-none transition-shadow touch-none';
+  'rounded-2xl select-none transition-all touch-none';
 
 interface SortableOrganizePageCardProps {
   page: OrganizePageState;
@@ -52,8 +46,6 @@ interface SortableOrganizePageCardProps {
   canReorder: boolean;
   isOverlay?: boolean;
   onToggleSelected: (pageId: string) => void;
-  onRotate: (pageId: string) => void;
-  onRemove: (pageId: string) => void;
 }
 
 function getProjectedTargetId(
@@ -126,128 +118,90 @@ function OrganizePageCardContent({
   displayPageNumber,
   disabled,
   onToggleSelected,
-  onRotate,
-  onRemove,
 }: {
   page: OrganizePageState;
   displayPageNumber: number;
   disabled: boolean;
   onToggleSelected?: (pageId: string) => void;
-  onRotate?: (pageId: string) => void;
-  onRemove?: (pageId: string) => void;
 }) {
   const rotationDegrees = quarterTurnsToDegrees(page.rotationQuarterTurns);
   const isSelected = !page.isDeleted;
+  const displayAspectRatio = getDisplayedPageAspectRatio(
+    page.aspectRatio,
+    page.rotationQuarterTurns,
+  );
 
   return (
-    <Card className="gap-3 border border-border py-3 shadow-none ring-0">
-      <CardContent className="space-y-3 px-3">
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-white p-2">
-          <div className="absolute left-3 right-3 top-3 z-20 flex items-center justify-between">
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Checkbox
-                    checked={isSelected}
-                    disabled={disabled || !onToggleSelected}
-                    aria-label={`${isSelected ? 'Deselect' : 'Select'} page ${String(displayPageNumber)}`}
-                    data-dnd-interactive="true"
-                    className="size-5 rounded-full border-border bg-white shadow-sm"
-                    onCheckedChange={() => {
-                      onToggleSelected?.(page.id);
-                    }}
-                  />
-                }
-              />
-              <TooltipContent>
-                {isSelected ? 'Include page' : 'Re-include page'}
-              </TooltipContent>
-            </Tooltip>
+    <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-pressed={isSelected}
+      aria-label={`${isSelected ? 'Deselect' : 'Select'} page ${String(displayPageNumber)}`}
+      className={cn(
+        'group/page relative overflow-hidden rounded-2xl p-3 text-left outline-none transition-all',
+        'focus-visible:ring-2 focus-visible:ring-ring/60',
+        isSelected
+          ? 'border-2 border-primary bg-accent/20 ring-2 ring-primary/20 shadow-sm'
+          : 'border-2 border-transparent bg-muted/25 hover:bg-muted/45',
+        disabled && 'pointer-events-none opacity-70',
+      )}
+      onClick={() => {
+        onToggleSelected?.(page.id);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onToggleSelected?.(page.id);
+        }
+      }}
+    >
+      <AspectRatio
+        ratio={displayAspectRatio}
+        className="relative overflow-hidden rounded-xl bg-background"
+      >
+        {page.thumbnailStatus === 'loading' ? (
+          <div className="relative z-10 flex h-full items-center justify-center">
+            <Spinner className="h-5 w-5" />
+          </div>
+        ) : page.thumbnailDataUrl ? (
+          <img
+            src={page.thumbnailDataUrl}
+            alt={`Preview for page ${String(page.sourcePageNumber)}`}
+            draggable={false}
+            className="relative z-10 h-full w-full scale-[1.03] object-cover object-center origin-center transition-transform duration-300 ease-out"
+            style={{ transform: `rotate(${String(rotationDegrees)}deg)` }}
+            loading="lazy"
+          />
+        ) : (
+          <div className="relative z-10 flex h-full items-center justify-center text-sm text-muted-foreground">
+            Preview not available
+          </div>
+        )}
 
-            <div className="flex items-center gap-1.5">
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      disabled={disabled || !isSelected || !onRotate}
-                      className={OVERLAY_ICON_BUTTON_CLASS}
-                      aria-label={`Rotate page ${String(displayPageNumber)}`}
-                      data-dnd-interactive="true"
-                      onClick={() => {
-                        onRotate?.(page.id);
-                      }}
-                    >
-                      <HugeiconsIcon icon={Rotate02Icon} strokeWidth={2} />
-                    </Button>
-                  }
-                />
-                <TooltipContent>Rotate page</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-sm"
-                      disabled={disabled || !isSelected || !onRemove}
-                      className={OVERLAY_ICON_BUTTON_CLASS}
-                      aria-label={`Exclude page ${String(displayPageNumber)}`}
-                      data-dnd-interactive="true"
-                      onClick={() => {
-                        onRemove?.(page.id);
-                      }}
-                    >
-                      <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-                    </Button>
-                  }
-                />
-                <TooltipContent>Exclude page</TooltipContent>
-              </Tooltip>
+        <div
+          className={cn(
+            'pointer-events-none absolute inset-0 z-20 transition-all',
+            isSelected
+              ? 'bg-primary/10 ring-1 ring-inset ring-primary/50'
+              : 'bg-transparent',
+          )}
+        />
+
+        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-30 flex justify-center">
+          <span className="rounded-full bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/75">
+            {`Page ${String(displayPageNumber)}`}
+          </span>
+        </div>
+
+        {isSelected ? (
+          <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+            <div className="flex size-12 items-center justify-center rounded-full border border-primary/20 bg-background/90 text-foreground shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <HugeiconsIcon icon={Tick02Icon} strokeWidth={2.2} />
             </div>
           </div>
-
-          <AspectRatio ratio={3 / 4} className="rounded-xl">
-            {page.thumbnailStatus === 'loading' ? (
-              <div className="flex h-full items-center justify-center">
-                <Spinner className="h-5 w-5" />
-              </div>
-            ) : page.thumbnailDataUrl ? (
-              <img
-                src={page.thumbnailDataUrl}
-                alt={`Preview for page ${String(page.sourcePageNumber)}`}
-                draggable={false}
-                className={cn(
-                  'h-full w-full rounded-xl object-contain object-top origin-center transition-transform duration-300 ease-out',
-                  page.isDeleted && 'opacity-40',
-                )}
-                style={{ transform: `rotate(${String(rotationDegrees)}deg)` }}
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                Preview not available
-              </div>
-            )}
-          </AspectRatio>
-
-          {page.isDeleted ? (
-            <div className="absolute inset-0 z-10 flex items-end justify-center bg-background/40 pb-3">
-              <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium">
-                Excluded
-              </span>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="px-1">
-          <p className="text-base font-semibold select-none">{`Page ${String(displayPageNumber)}`}</p>
-        </div>
-      </CardContent>
-    </Card>
+        ) : null}
+      </AspectRatio>
+    </div>
   );
 }
 
@@ -259,13 +213,16 @@ function SortableOrganizePageCard({
   canReorder,
   isOverlay = false,
   onToggleSelected,
-  onRotate,
-  onRemove,
 }: SortableOrganizePageCardProps) {
   const { ref, isDragging, isDropTarget } = useSortable({
     id: page.id,
     index,
     disabled: isOverlay || disabled || !canReorder,
+    transition: {
+      duration: 250,
+      easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+      idle: false,
+    },
   });
 
   return (
@@ -279,7 +236,7 @@ function SortableOrganizePageCard({
           !isOverlay &&
           'cursor-grab active:cursor-grabbing',
         isDragging && 'ring-2 ring-ring shadow-sm',
-        isDropTarget && 'border-primary/60 ring-2 ring-primary/30',
+        isDropTarget && 'scale-[1.01] ring-2 ring-primary/30',
       )}
       tabIndex={canReorder && !disabled && !isOverlay ? 0 : undefined}
       aria-label={
@@ -293,8 +250,6 @@ function SortableOrganizePageCard({
         displayPageNumber={displayPageNumber}
         disabled={disabled}
         onToggleSelected={isOverlay ? undefined : onToggleSelected}
-        onRotate={isOverlay ? undefined : onRotate}
-        onRemove={isOverlay ? undefined : onRemove}
       />
     </li>
   );
@@ -423,8 +378,6 @@ interface OrganizePageGridProps {
   isExporting: boolean;
   onDragReorder: (sourceId: string, targetId: string) => void;
   onToggleSelected: (pageId: string) => void;
-  onRotate: (pageId: string) => void;
-  onRemove: (pageId: string) => void;
 }
 
 function OrganizePageGrid({
@@ -433,8 +386,6 @@ function OrganizePageGrid({
   isExporting,
   onDragReorder,
   onToggleSelected,
-  onRotate,
-  onRemove,
 }: OrganizePageGridProps) {
   const [draggedPageId, setDraggedPageId] = useState<string | null>(null);
   const canReorder = visiblePages.length > 1;
@@ -482,8 +433,6 @@ function OrganizePageGrid({
             disabled={isExporting}
             canReorder={canReorder}
             onToggleSelected={onToggleSelected}
-            onRotate={onRotate}
-            onRemove={onRemove}
           />
         ))}
       </ul>
@@ -537,8 +486,8 @@ function OrganizeSelectionState({
 }) {
   return (
     <ToolWorkspace
-      title="Organize PDF"
-      description="Choose a PDF, then reorder, rotate, or exclude pages."
+      title="Extract Pages"
+      description="Choose a PDF, then select the pages to keep."
       titleIcon={organizeToolDefinition.icon}
       inputPanel={
         <PdfFileSelector
@@ -563,8 +512,8 @@ function OrganizeLoadingState({
 }) {
   return (
     <ToolWorkspace
-      title="Organize PDF"
-      description="Loading pages so you can reorder them."
+      title="Extract Pages"
+      description="Loading pages."
       titleIcon={organizeToolDefinition.icon}
       inputPanel={fileInfoPanel}
       outputPanel={
@@ -595,8 +544,6 @@ interface OrganizeReadyStateProps {
   onNextPage: () => void;
   onDragReorder: (sourceId: string, targetId: string) => void;
   onToggleSelected: (pageId: string) => void;
-  onRotate: (pageId: string) => void;
-  onRemove: (pageId: string) => void;
   onExport: () => void;
 }
 
@@ -617,14 +564,12 @@ function OrganizeReadyState({
   onNextPage,
   onDragReorder,
   onToggleSelected,
-  onRotate,
-  onRemove,
   onExport,
 }: OrganizeReadyStateProps) {
   return (
     <ToolWorkspace
-      title="Organize PDF"
-      description="Reorder, rotate, or exclude pages, then export a new PDF."
+      title="Extract Pages"
+      description="Select pages, reorder them, then export a new PDF."
       titleIcon={organizeToolDefinition.icon}
       inputPanel={fileInfoPanel}
       outputPanel={
@@ -650,8 +595,6 @@ function OrganizeReadyState({
               isExporting={isExporting}
               onDragReorder={onDragReorder}
               onToggleSelected={onToggleSelected}
-              onRotate={onRotate}
-              onRemove={onRemove}
             />
           </TooltipProvider>
 
@@ -733,12 +676,6 @@ export function OrganizeToolScreen() {
       }}
       onToggleSelected={(pageId) => {
         workspace.togglePageSelected(pageId);
-      }}
-      onRotate={(pageId) => {
-        workspace.rotatePage(pageId);
-      }}
-      onRemove={(pageId) => {
-        workspace.removePage(pageId);
       }}
       onExport={() => {
         workspace.handleExport();

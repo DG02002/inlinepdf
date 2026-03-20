@@ -30,7 +30,7 @@ const toolIconBySlug: Partial<Record<string, typeof File01Icon>> = {
   crop: CropIcon,
   'image-to-pdf': ImageToPdfToolIcon,
   merge: GitMergeIcon,
-  organize: ArrangeIcon,
+  'extract-pages': ArrangeIcon,
   info: InformationCircleIcon,
   'pdf-to-images': PdfToImagesToolIcon,
 } as const;
@@ -56,7 +56,7 @@ const orderedShippingLabelTools = shippingLabelToolSortOrder
 const generalToolSortOrder = [
   'info',
   'merge',
-  'organize',
+  'extract-pages',
   'crop',
   'image-to-pdf',
   'pdf-to-images',

@@ -11,6 +11,7 @@ describe('getOrganizePagesToLoadForThumbnailPrefetch', () => {
       id: `page-${String(index + 1)}`,
       sourcePageNumber: index + 1,
       rotationQuarterTurns: 0,
+      aspectRatio: 3 / 4,
       isDeleted: false,
       thumbnailDataUrl: null,
       thumbnailStatus:

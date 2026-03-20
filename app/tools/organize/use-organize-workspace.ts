@@ -161,6 +161,25 @@ export function useOrganizeWorkspace() {
 
     for (const page of pagesToLoad) {
       void state.previewSession
+        .getPageAspectRatio(page.sourcePageNumber)
+        .then((aspectRatio) => {
+          if (!selection.isCurrent(activeSelectionToken)) {
+            return;
+          }
+
+          dispatchDeferredFromEffect({
+            type: 'pageAspectRatioLoaded',
+            pageId: page.id,
+            aspectRatio,
+          });
+        })
+        .catch(() => {
+          if (!selection.isCurrent(activeSelectionToken)) {
+            return;
+          }
+        });
+
+      void state.previewSession
         .getPageThumbnail(page.sourcePageNumber)
         .then((thumbnailDataUrl) => {
           if (!selection.isCurrent(activeSelectionToken)) {
