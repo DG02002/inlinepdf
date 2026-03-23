@@ -17,9 +17,6 @@ worker-configuration.d.ts
 !.dev.vars.example
 !.env.example
 
-react-router-app/
-tex/
-writing-style/
 latex/
 samples/
 guidelines/

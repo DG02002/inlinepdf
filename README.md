@@ -28,6 +28,37 @@ InlinePDF includes dedicated shipping-label preparation for **Meesho Labels**, *
 
 Document operations run in-browser instead of remote processing. The same product includes general-purpose PDF tools and retailer label workflows, so multiple document tasks stay in one local-first workspace. The architecture is modular, which keeps feature delivery focused and predictable.
 
+## Benchmark
+
+This benchmark uses one real retailer-label workflow so people can compare local-first performance quickly.
+
+- **Input file:** `Meesho_784_pages.pdf`
+- **File size:** `8.1 MB`
+- **Pages:** `784`
+- **Workflow:** `Meesho Labels`
+- **Test condition:** SKU sorting was turned on for every run, including InlinePDF, E-LabelCrop, and PDF Cropper, to keep the comparison fair.
+
+| Product | Processing location | Device or service | Outcome | Time | Evidence |
+| --- | --- | --- | --- | --- | --- |
+| InlinePDF | Local | MacBook Air M4 | Completed | `11s` | [Screenshot](./assets/readme/benchmark/meesho-labels-inlinepdf-macbook-air-m4.png) |
+| InlinePDF | Local | Pixel 7a | Completed | `18s` | [Screenshot](./assets/readme/benchmark/meesho-labels-inlinepdf-pixel-7a.png) |
+| InlinePDF | Local | realme 2 Pro | Completed | `42s` | [Screenshot](./assets/readme/benchmark/meesho-labels-inlinepdf-realme-2-pro.png) |
+| E-LabelCrop | Cloud | `elabelcrop.com` | Completed | `40.50s` | [Screenshot](./assets/readme/benchmark/meesho-labels-elabelcrop.png) |
+| PDF Cropper | Cloud | `pdfcropper.in` | Did not complete this file at the time of testing | N/A | [Screenshot](./assets/readme/benchmark/meesho-labels-pdfcropper.png) |
+
+### Technical Notes
+
+- These results suggest that this Meesho Labels workload depends more on processor performance than on RAM for this input size.
+- The tested realme 2 Pro unit completed the job on the `4GB + 64GB` variant. According to the [realme 2 Pro tech specs](https://www.realme.com/global/realme2-pro/specs), that model uses a Qualcomm Snapdragon 660 AIE processor with an octa-core CPU.
+- This does not mean RAM never matters. It suggests that `4GB` was sufficient for this `784`-page, `8.1 MB` benchmark and that the larger performance gap is more likely tied to processor class and JavaScript execution speed than RAM capacity alone.
+- To match the benchmarked Chrome results, keep V8 optimization enabled. Google says V8 optimization is turned on by default to improve site performance. All benchmark runs in this section were performed with that setting enabled.
+- On Chrome for desktop, the path is [Privacy and security > Security > Manage V8 security](https://support.google.com/chrome/answer/10468685?co=GENIE.Platform%3DDesktop&oco=1#zippy=%2Cmanage-v-security-settings), then select `Sites can use the V8 optimizer`.
+- On Chrome for Android, open [Privacy and security > JavaScript optimization and security](https://support.google.com/chrome/answer/10468685?co=GENIE.Platform%3DAndroid&hl=en), and leave JavaScript optimization turned on.
+
+This is a point-in-time comparison for a single file and workflow. Results vary by device performance, browser, thermal state, network conditions, and service load.
+
+The cloud services in this comparison showed ads during testing. InlinePDF completed the same Meesho label workflow locally on each tested device.
+
 ## Build, Test, and Deploy
 
 ### Local Development
