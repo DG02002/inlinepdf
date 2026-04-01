@@ -137,6 +137,8 @@
 
 html {
   font-family: 'Inter Variable', system-ui, sans-serif;
+  min-height: 100%;
+  margin: 0;
 }
 
 html[data-resolved-theme='light'] {
@@ -150,6 +152,8 @@ html[data-resolved-theme='dark'] {
 body {
   background-color: var(--background);
   color: var(--foreground);
+  min-height: 100%;
+  margin: 0;
   overflow-x: hidden;
 }
 
