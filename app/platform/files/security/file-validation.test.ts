@@ -82,7 +82,7 @@ describe('file validation', () => {
     );
 
     await expect(validateImageFile(spoofed)).rejects.toThrow(
-      'Only JPG and PNG images are supported: bad.gif',
+      'Only JPG and PNG images are supported. bad.gif is not supported.',
     );
   });
 

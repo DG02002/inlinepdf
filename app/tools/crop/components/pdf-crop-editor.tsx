@@ -114,6 +114,21 @@ function areSamePercentCrop(
   );
 }
 
+function areSameOptionalPercentCrop(
+  a: PercentCrop | undefined,
+  b: PercentCrop | undefined,
+): boolean {
+  if (!a && !b) {
+    return true;
+  }
+
+  if (!a || !b) {
+    return false;
+  }
+
+  return areSamePercentCrop(a, b);
+}
+
 export function PdfCropEditor({
   sourceFile,
   pageNumber,
@@ -144,7 +159,22 @@ export function PdfCropEditor({
   });
 
   useEffect(() => {
-    setCurrentCrop(cropRect ? normalizedToPercentRect(cropRect) : undefined);
+    let cancelled = false;
+    const nextCrop = cropRect ? normalizedToPercentRect(cropRect) : undefined;
+
+    queueMicrotask(() => {
+      if (cancelled) {
+        return;
+      }
+
+      setCurrentCrop((current) =>
+        areSameOptionalPercentCrop(current, nextCrop) ? current : nextCrop,
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [cropRect, pageNumber]);
 
   useEffect(() => {
@@ -179,8 +209,14 @@ export function PdfCropEditor({
     let loadedSession: Awaited<ReturnType<typeof openPdfJsDocument>> | null =
       null;
 
-    setPdfDocument(null);
-    setErrorMessage(null);
+    queueMicrotask(() => {
+      if (cancellation.cancelled) {
+        return;
+      }
+
+      setPdfDocument(null);
+      setErrorMessage(null);
+    });
 
     void (async () => {
       try {

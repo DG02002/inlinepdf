@@ -646,15 +646,13 @@ export async function prepareShippingLabelPdf(
     openPdfJsDocument(sourceBytes),
   ]);
   const previewDocument = previewSession.document;
+  const pagesProcessed = previewDocument.numPages;
 
-  let pagesProcessed = 0;
   let pagesSkipped = 0;
   const skippedPageNumbers: number[] = [];
   const preparedLabels: PreparedLabelPage[] = [];
 
   try {
-    pagesProcessed = previewDocument.numPages;
-
     for (
       let pageNumber = 1;
       pageNumber <= previewDocument.numPages;

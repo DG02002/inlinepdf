@@ -130,6 +130,6 @@ describe('exportOrganizedPdf', () => {
         file,
         pages,
       }),
-    ).rejects.toThrow('Restore at least one page before exporting.');
+    ).rejects.toThrow('Include at least one page before exporting.');
   });
 });

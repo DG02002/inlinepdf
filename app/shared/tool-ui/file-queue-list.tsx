@@ -273,13 +273,13 @@ export function FileQueueList({
   onRemove,
   appendItem,
 }: FileQueueListProps) {
-  if (files.length === 0) {
-    return null;
-  }
-
   const canReorder = !!onReorder && files.length > 1;
   const reorderFiles = onReorder;
   const lastReorderRef = useRef<string | null>(null);
+
+  if (files.length === 0) {
+    return null;
+  }
 
   function resolveTargetId(event: unknown) {
     const sourceId = getEventSourceId(event);

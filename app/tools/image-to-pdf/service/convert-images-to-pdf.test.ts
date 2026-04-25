@@ -30,7 +30,7 @@ describe('convert-images-to-pdf service', () => {
         files: [],
         quality: 'medium',
       }),
-    ).rejects.toThrow('Select at least one image to convert.');
+    ).rejects.toThrow('Select at least one image before converting.');
   });
 
   it('rejects unsupported input files', async () => {
@@ -41,7 +41,9 @@ describe('convert-images-to-pdf service', () => {
         files: [file],
         quality: 'medium',
       }),
-    ).rejects.toThrow('Only JPG and PNG images are supported: animated.gif');
+    ).rejects.toThrow(
+      'Only JPG and PNG images are supported. animated.gif is not supported.',
+    );
   });
 
   it('creates one PDF page per selected image', async () => {

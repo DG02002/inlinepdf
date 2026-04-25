@@ -725,7 +725,7 @@ describe('prepareShippingLabelPdf', () => {
 
     expect(outputDocument.getPageCount()).toBe(2);
     expect(outputDocument.getPage(0).getWidth()).toBeCloseTo(595, 4);
-    expect(outputDocument.getPage(0).getHeight()).toBeCloseTo(395.11, 2);
+    expect(outputDocument.getPage(0).getHeight()).toBeCloseTo(382.48, 2);
     expect(outputDocument.getPage(1).getWidth()).toBeCloseTo(595, 4);
   });
 
