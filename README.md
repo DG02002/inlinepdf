@@ -1,3 +1,6 @@
+> [!WARNING]
+> I no longer like to work with PDF files. Additionally, the ecosystem lacks a proper, up-to-date single PDF library to ensure future stability for a project of this scope. For an alternative, consider [BentoPDF](https://github.com/alam00000/bentopdf).
+
 <p align="center">
   <img src="./public/icons/hero-logo-light-1024.png" alt="InlinePDF Logo" width="132" />
 </p>
